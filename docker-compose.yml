@@ -1,0 +1,48 @@
+# ฐานข้อมูลของร้านค้าสำหรับเครื่อง dev (1 ระบบย่อย = 1 ฐานข้อมูล · ห้ามชี้ไปที่ core_hub)
+#   docker compose up -d db          → PostgreSQL 16 ที่ localhost:5434 (ฐานข้อมูล shop_db)
+#   docker compose up -d --build     → db + backend (:3002)
+# รหัสผ่านอ่านจาก env SHOP_DB_PASSWORD (ตั้งใน .env ข้าง ๆ ไฟล์นี้ ห้าม commit)
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shop_db
+      POSTGRES_USER: ${SHOP_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${SHOP_DB_PASSWORD:?ตั้ง SHOP_DB_PASSWORD ใน .env ก่อน}
+    ports:
+      - "5434:5432"
+    volumes:
+      - shop-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SHOP_DB_USER:-postgres} -d shop_db"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://${SHOP_DB_USER:-postgres}:${SHOP_DB_PASSWORD}@db:5432/shop_db
+      CORE_HUB_URL: ${CORE_HUB_URL:-http://host.docker.internal:3000}
+      CORE_HUB_JWKS_URL: ${CORE_HUB_JWKS_URL:-http://host.docker.internal:3000/api/v1/.well-known/jwks.json}
+      CORE_HUB_WEB_URL: ${CORE_HUB_WEB_URL:-http://localhost:3100}
+      CORE_HUB_ISSUER: core-hub
+      CORE_HUB_AUDIENCE: csmju2030
+      SUBSYSTEM_ID: csmju-shop
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4000}
+      NODE_ENV: development
+    ports:
+      - "3002:3002"
+    volumes:
+      - shop-uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  shop-db:
+  shop-uploads:

@@ -1,0 +1,3092 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealthModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "GET /api/health — public · data.service ต้องตรงกับ name ใน subsystem.yaml",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MeModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ตัวตนของผู้ใช้ปัจจุบัน + role/permission ภายในร้านค้า",
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "operationId": "ProductsController_findAll",
+        "parameters": [
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "กรองตามหมวดหมู่",
+            "schema": {
+              "maxLength": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "isPreorder",
+            "required": false,
+            "in": "query",
+            "description": "กรองเฉพาะพรีออเดอร์ (true) หรือพร้อมส่ง (false)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "ค้นจากชื่อหรือรายละเอียด",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "หน้าที่ต้องการ เริ่มที่ 1",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "จำนวนต่อหน้า 1–100",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ProductModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "รายการสินค้า (แบ่งหน้า)",
+        "tags": [
+          "products"
+        ]
+      },
+      "post": {
+        "operationId": "ProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "เพิ่มสินค้า (เจ้าหน้าที่)",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "operationId": "ProductsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "สินค้าหนึ่งรายการพร้อมตัวเลือก",
+        "tags": [
+          "products"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "แก้ไขสินค้าบางฟิลด์ (เจ้าหน้าที่)",
+        "tags": [
+          "products"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ลบสินค้า (ผู้ดูแล) — ลบไม่ได้ถ้าเคยถูกสั่งซื้อแล้ว",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/product-categories": {
+      "get": {
+        "operationId": "ProductCategoriesController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "หน้าที่ต้องการ เริ่มที่ 1",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "จำนวนต่อหน้า 1–100",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ProductCategoryModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "หมวดหมู่สินค้าพร้อมจำนวนสินค้าในแต่ละหมวด",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/product-variants": {
+      "get": {
+        "operationId": "ProductVariantsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "หน้าที่ต้องการ เริ่มที่ 1",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "จำนวนต่อหน้า 1–100",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "description": "กรองตามสินค้า",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "inStock",
+            "required": false,
+            "in": "query",
+            "description": "เฉพาะตัวเลือกที่ยังมีของ",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VariantWithProductModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "รายการตัวเลือกสินค้า (ใช้หน้าจัดการสต็อก)",
+        "tags": [
+          "product-variants"
+        ]
+      },
+      "post": {
+        "operationId": "ProductVariantsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VariantWithProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "เพิ่มตัวเลือกให้สินค้า (เจ้าหน้าที่)",
+        "tags": [
+          "product-variants"
+        ]
+      }
+    },
+    "/api/v1/product-variants/{id}": {
+      "get": {
+        "operationId": "ProductVariantsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VariantWithProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-variants"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductVariantsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VariantWithProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-variants"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductVariantsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "product-variants"
+        ]
+      }
+    },
+    "/api/v1/product-variants/{id}/stock": {
+      "patch": {
+        "operationId": "ProductVariantsController_updateStock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/VariantWithProductModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ปรับสต็อก (เพิ่ม/ลด หรือกำหนดค่า)",
+        "tags": [
+          "product-variants"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "get": {
+        "operationId": "OrdersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "หน้าที่ต้องการ เริ่มที่ 1",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "จำนวนต่อหน้า 1–100",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "orderStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "CONFIRMED",
+                "PREPARING",
+                "READY_FOR_PICKUP",
+                "SHIPPED",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "paymentStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "WAITING_VERIFY",
+                "PAID",
+                "REJECTED",
+                "REFUNDED"
+              ]
+            }
+          },
+          {
+            "name": "deliveryMethod",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PICKUP",
+                "DELIVERY"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "ค้นจากเลขที่คำสั่งซื้อ รหัสรับสินค้า เลขพัสดุ ชื่อหรืออีเมลผู้สั่ง",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderNumber",
+            "required": false,
+            "in": "query",
+            "description": "เลขที่คำสั่งซื้อแบบตรงตัว เช่น ORD-202609-0001",
+            "schema": {
+              "maxLength": 20,
+              "type": "string"
+            }
+          },
+          {
+            "name": "mine",
+            "required": false,
+            "in": "query",
+            "description": "true = เฉพาะคำสั่งซื้อของฉัน (เจ้าหน้าที่ใช้ดูของตัวเอง)",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "รายการคำสั่งซื้อ — ลูกค้าเห็นเฉพาะของตัวเอง เจ้าหน้าที่เห็นทั้งหมด",
+        "tags": [
+          "orders"
+        ]
+      },
+      "post": {
+        "operationId": "OrdersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "สั่งซื้อ — เจ้าของคือผู้ที่ login อยู่",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "operationId": "OrdersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "orders"
+        ]
+      },
+      "delete": {
+        "operationId": "OrdersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ลบคำสั่งซื้อ (ผู้ดูแล)",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/payment-status": {
+      "patch": {
+        "operationId": "OrdersController_updatePaymentStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ตรวจสลิป / เปลี่ยนสถานะการชำระเงิน (เจ้าหน้าที่)",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/order-status": {
+      "patch": {
+        "operationId": "OrdersController_updateOrderStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "เปลี่ยนสถานะคำสั่งซื้อ (เจ้าหน้าที่) — ยกเลิกแล้วคืนสต็อก",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/shipping": {
+      "patch": {
+        "operationId": "OrdersController_updateShipping",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShippingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "บริษัทขนส่ง + เลขพัสดุ (เฉพาะแบบจัดส่ง)",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/payment-slip": {
+      "patch": {
+        "operationId": "OrdersController_updatePaymentSlip",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePaymentSlipDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "แนบสลิปการชำระเงิน — เจ้าของคำสั่งซื้อ",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}/items": {
+      "get": {
+        "operationId": "OrdersController_findItems",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/OrderItemModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "รายการสินค้าในคำสั่งซื้อ",
+        "tags": [
+          "orders"
+        ]
+      },
+      "post": {
+        "operationId": "OrdersController_addItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderItemModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "เพิ่มสินค้าเข้าคำสั่งซื้อ (เจ้าหน้าที่)",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/order-items/{id}": {
+      "get": {
+        "operationId": "OrderItemsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderItemModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "order-items"
+        ]
+      },
+      "patch": {
+        "operationId": "OrderItemsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderItemModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "แก้จำนวน (เจ้าหน้าที่)",
+        "tags": [
+          "order-items"
+        ]
+      },
+      "delete": {
+        "operationId": "OrderItemsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ลบรายการและคืนสต็อก (เจ้าหน้าที่)",
+        "tags": [
+          "order-items"
+        ]
+      }
+    },
+    "/api/v1/pickup-logs": {
+      "get": {
+        "operationId": "PickupLogsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "description": "หน้าที่ต้องการ เริ่มที่ 1",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "description": "จำนวนต่อหน้า 1–100",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "staffCoreUserId",
+            "required": false,
+            "in": "query",
+            "description": "กรองตามเจ้าหน้าที่ผู้บันทึก (core_user_id)",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PickupLogModel"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pickup-logs"
+        ]
+      },
+      "post": {
+        "operationId": "PickupLogsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePickupLogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PickupLogModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "บันทึกการส่งมอบสินค้า (เจ้าหน้าที่) — ปิดคำสั่งซื้อเป็น COMPLETED",
+        "tags": [
+          "pickup-logs"
+        ]
+      }
+    },
+    "/api/v1/pickup-logs/{id}": {
+      "get": {
+        "operationId": "PickupLogsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PickupLogModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pickup-logs"
+        ]
+      },
+      "delete": {
+        "operationId": "PickupLogsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pickup-logs"
+        ]
+      }
+    },
+    "/api/v1/pickup-verifications": {
+      "post": {
+        "operationId": "PickupVerificationsController_verify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePickupVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PickupVerificationModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "pickup-logs"
+        ]
+      }
+    },
+    "/api/v1/order-stats": {
+      "get": {
+        "operationId": "OrderStatsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OrderStatsModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ภาพรวมยอดขายและจำนวนคำสั่งซื้อตามสถานะ (หน้าแดชบอร์ดเจ้าหน้าที่)",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/product-images": {
+      "post": {
+        "operationId": "ProductImagesController_upload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ProductImageModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "อัปโหลดรูปสินค้า (multipart/form-data ฟิลด์ชื่อ file) → คืน url ไปใส่ imageUrl ของสินค้า\nเก็บไฟล์ในดิสก์ ฐานข้อมูลเก็บแค่ที่อยู่ไฟล์",
+        "tags": [
+          "product-images"
+        ]
+      }
+    },
+    "/api/v1/product-images/{id}": {
+      "delete": {
+        "operationId": "ProductImagesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DeletedModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "ลบรูปที่ไม่ใช้แล้ว",
+        "tags": [
+          "product-images"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "CSMJU Shop API",
+    "description": "ร้านค้าออนไลน์สาขาวิทยาการคอมพิวเตอร์ ม.แม่โจ้ — ทุก endpoint ต้องมี Core Hub token (Authorization: Bearer หรือคุกกี้ core_hub_access_token) ยกเว้น GET /api/health · ทุก response ห่อด้วย { success, data, meta? } · เงินทุกช่องเป็นจำนวนเต็มหน่วยสตางค์",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthModel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "database": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "service"
+        ]
+      },
+      "PageMetaModel": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "MeModel": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "description": "claim `sub` ของ Core Hub"
+          },
+          "email": {
+            "type": "string"
+          },
+          "coreRole": {
+            "type": "string",
+            "description": "student · alumni · staff · admin"
+          },
+          "subsystemRole": {
+            "type": "string",
+            "description": "STUDENT · ALUMNI · STAFF · ADMIN"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "เวลาที่ session (Core Hub token) หมดอายุ"
+          }
+        },
+        "required": [
+          "permissions",
+          "id",
+          "email",
+          "coreRole",
+          "subsystemRole",
+          "expiresAt"
+        ]
+      },
+      "ProductVariantModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "variantName": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น หน่วยสตางค์"
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "ติดลบได้เฉพาะสินค้าพรีออเดอร์ (= ยอดที่ต้องสั่งผลิตเพิ่ม)"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "variantName",
+          "price",
+          "stockQuantity",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ProductModel": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "preorderEndDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "estimatedDelivery": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD",
+            "format": "date"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVariantModel"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "isPreorder": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "imageUrl",
+          "preorderEndDate",
+          "estimatedDelivery",
+          "variants",
+          "id",
+          "name",
+          "category",
+          "isPreorder",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateProductVariantInlineDto": {
+        "type": "object",
+        "properties": {
+          "variantName": {
+            "type": "string",
+            "description": "ชื่อตัวเลือก เช่น \"M\" หรือ \"ดำ / L\"",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "price": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น หน่วยสตางค์ (เช่น 25000 = 250 บาท)",
+            "minimum": 0
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "จำนวนคงเหลือเริ่มต้น",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "variantName",
+          "price"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "ชื่อสินค้า",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "description": {
+            "type": "string",
+            "description": "รายละเอียดสินค้า"
+          },
+          "category": {
+            "type": "string",
+            "description": "หมวดหมู่ เช่น \"เสื้อ\" \"ของที่ระลึก\"",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL รูปที่ได้จาก POST /api/v1/product-images (ส่ง \"\" เพื่อเอารูปออก)",
+            "minLength": 0,
+            "maxLength": 255
+          },
+          "isPreorder": {
+            "type": "boolean",
+            "description": "เป็นสินค้าพรีออเดอร์หรือไม่"
+          },
+          "preorderEndDate": {
+            "type": "string",
+            "description": "วันปิดรับพรีออเดอร์ (ISO 8601) — บังคับเมื่อ isPreorder = true · ส่ง \"\" เพื่อล้างค่า"
+          },
+          "estimatedDelivery": {
+            "type": "string",
+            "description": "วันที่คาดว่าจะได้รับสินค้า (YYYY-MM-DD) · ส่ง \"\" เพื่อล้างค่า",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2})?$"
+          },
+          "variants": {
+            "description": "ตัวเลือกสินค้าเริ่มต้น",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductVariantInlineDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "category"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "ชื่อสินค้า",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "description": {
+            "type": "string",
+            "description": "รายละเอียดสินค้า"
+          },
+          "category": {
+            "type": "string",
+            "description": "หมวดหมู่ เช่น \"เสื้อ\" \"ของที่ระลึก\"",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL รูปที่ได้จาก POST /api/v1/product-images (ส่ง \"\" เพื่อเอารูปออก)",
+            "minLength": 0,
+            "maxLength": 255
+          },
+          "isPreorder": {
+            "type": "boolean",
+            "description": "เป็นสินค้าพรีออเดอร์หรือไม่"
+          },
+          "preorderEndDate": {
+            "type": "string",
+            "description": "วันปิดรับพรีออเดอร์ (ISO 8601) — บังคับเมื่อ isPreorder = true · ส่ง \"\" เพื่อล้างค่า"
+          },
+          "estimatedDelivery": {
+            "type": "string",
+            "description": "วันที่คาดว่าจะได้รับสินค้า (YYYY-MM-DD) · ส่ง \"\" เพื่อล้างค่า",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2})?$"
+          }
+        }
+      },
+      "DeletedModel": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "ProductCategoryModel": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "productCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "category",
+          "productCount"
+        ]
+      },
+      "ProductSummaryModel": {
+        "type": "object",
+        "properties": {
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "isPreorder": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "imageUrl",
+          "id",
+          "name",
+          "category",
+          "isPreorder"
+        ]
+      },
+      "VariantWithProductModel": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/ProductSummaryModel"
+          },
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "variantName": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น หน่วยสตางค์"
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "ติดลบได้เฉพาะสินค้าพรีออเดอร์ (= ยอดที่ต้องสั่งผลิตเพิ่ม)"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "id",
+          "productId",
+          "variantName",
+          "price",
+          "stockQuantity",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateVariantDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "id ของสินค้า (UUID)",
+            "format": "uuid"
+          },
+          "variantName": {
+            "type": "string",
+            "description": "ชื่อตัวเลือก เช่น \"M\"",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "price": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น หน่วยสตางค์",
+            "minimum": 0
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "จำนวนคงเหลือเริ่มต้น",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "productId",
+          "variantName",
+          "price"
+        ]
+      },
+      "UpdateVariantDto": {
+        "type": "object",
+        "properties": {
+          "variantName": {
+            "type": "string",
+            "description": "ชื่อตัวเลือก เช่น \"M\"",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "price": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น หน่วยสตางค์",
+            "minimum": 0
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "จำนวนคงเหลือเริ่มต้น",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateStockDto": {
+        "type": "object",
+        "properties": {
+          "adjust": {
+            "type": "number",
+            "description": "จำนวนที่เพิ่ม (บวก) หรือลด (ลบ)"
+          },
+          "set": {
+            "type": "number",
+            "description": "กำหนดจำนวนคงเหลือใหม่",
+            "minimum": 0
+          }
+        }
+      },
+      "DeliveryMethod": {
+        "type": "string",
+        "enum": [
+          "PICKUP",
+          "DELIVERY"
+        ]
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "WAITING_VERIFY",
+          "PAID",
+          "REJECTED",
+          "REFUNDED"
+        ]
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CONFIRMED",
+          "PREPARING",
+          "READY_FOR_PICKUP",
+          "SHIPPED",
+          "COMPLETED",
+          "CANCELLED"
+        ]
+      },
+      "OrderItemProductModel": {
+        "type": "object",
+        "properties": {
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "isPreorder": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "imageUrl",
+          "id",
+          "name",
+          "category",
+          "isPreorder"
+        ]
+      },
+      "OrderItemVariantModel": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/OrderItemProductModel"
+          },
+          "id": {
+            "type": "string"
+          },
+          "variantName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "id",
+          "variantName"
+        ]
+      },
+      "OrderItemModel": {
+        "type": "object",
+        "properties": {
+          "variant": {
+            "$ref": "#/components/schemas/OrderItemVariantModel"
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "variantId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "ราคาต่อชิ้น ณ ตอนสั่ง หน่วยสตางค์"
+          },
+          "isPreorderItem": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variant",
+          "id",
+          "orderId",
+          "variantId",
+          "quantity",
+          "unitPrice",
+          "isPreorderItem",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PickupLogEntryModel": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "staffCoreUserId": {
+            "type": "string"
+          },
+          "staffEmail": {
+            "type": "string"
+          },
+          "pickupTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notes",
+          "id",
+          "orderId",
+          "staffCoreUserId",
+          "staffEmail",
+          "pickupTime",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OrderModel": {
+        "type": "object",
+        "properties": {
+          "deliveryMethod": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryMethod"
+              }
+            ]
+          },
+          "shippingAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentSlip": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            ]
+          },
+          "orderStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "pickupCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "รหัสรับสินค้า (เฉพาะ PICKUP)"
+          },
+          "shippingCarrier": {
+            "type": "string",
+            "nullable": true
+          },
+          "trackingNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "orderItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemModel"
+            }
+          },
+          "pickupLogs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PickupLogEntryModel"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "เช่น ORD-202609-0001"
+          },
+          "coreUserId": {
+            "type": "string",
+            "description": "เจ้าของคำสั่งซื้อ (claim `sub` ของ Core Hub)"
+          },
+          "customerEmail": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "recipientPhone": {
+            "type": "string"
+          },
+          "totalAmount": {
+            "type": "number",
+            "description": "ยอดรวม หน่วยสตางค์"
+          },
+          "shippingFee": {
+            "type": "number",
+            "description": "ค่าจัดส่ง หน่วยสตางค์"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deliveryMethod",
+          "shippingAddress",
+          "paymentSlip",
+          "paymentStatus",
+          "orderStatus",
+          "pickupCode",
+          "shippingCarrier",
+          "trackingNumber",
+          "shippedAt",
+          "orderItems",
+          "pickupLogs",
+          "id",
+          "orderNumber",
+          "coreUserId",
+          "customerEmail",
+          "recipientName",
+          "recipientPhone",
+          "totalAmount",
+          "shippingFee",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "OrderItemInputDto": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "description": "id ของตัวเลือกสินค้า",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "จำนวน",
+            "minimum": 1,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "variantId",
+          "quantity"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "deliveryMethod": {
+            "type": "string",
+            "description": "PICKUP = รับที่สาขา · DELIVERY = จัดส่ง",
+            "enum": [
+              "PICKUP",
+              "DELIVERY"
+            ]
+          },
+          "recipientName": {
+            "type": "string",
+            "description": "ชื่อผู้รับ",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "recipientPhone": {
+            "type": "string",
+            "description": "เบอร์โทร ตัวเลขล้วน 9–10 หลัก ไม่มีขีด",
+            "pattern": "^0\\d{8,9}$"
+          },
+          "shippingAddress": {
+            "type": "string",
+            "description": "ที่อยู่จัดส่ง — บังคับเมื่อ deliveryMethod = DELIVERY",
+            "minLength": 0,
+            "maxLength": 500
+          },
+          "paymentSlip": {
+            "type": "string",
+            "description": "URL หรือชื่อไฟล์สลิปโอนเงิน (แนบภายหลังได้)",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "items": {
+            "description": "รายการสินค้า",
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemInputDto"
+            }
+          }
+        },
+        "required": [
+          "deliveryMethod",
+          "recipientName",
+          "recipientPhone",
+          "items"
+        ]
+      },
+      "UpdatePaymentStatusDto": {
+        "type": "object",
+        "properties": {
+          "paymentStatus": {
+            "type": "string",
+            "description": "สถานะการชำระเงินใหม่",
+            "enum": [
+              "PENDING",
+              "WAITING_VERIFY",
+              "PAID",
+              "REJECTED",
+              "REFUNDED"
+            ]
+          }
+        },
+        "required": [
+          "paymentStatus"
+        ]
+      },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "orderStatus": {
+            "type": "string",
+            "description": "สถานะคำสั่งซื้อใหม่",
+            "enum": [
+              "PENDING",
+              "CONFIRMED",
+              "PREPARING",
+              "READY_FOR_PICKUP",
+              "SHIPPED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          }
+        },
+        "required": [
+          "orderStatus"
+        ]
+      },
+      "UpdateShippingDto": {
+        "type": "object",
+        "properties": {
+          "shippingCarrier": {
+            "type": "string",
+            "description": "รหัสบริษัทขนส่ง เช่น thailand_post / flash / kerry หรือชื่อขนส่งอื่น",
+            "minLength": 0,
+            "maxLength": 50
+          },
+          "trackingNumber": {
+            "type": "string",
+            "description": "เลขพัสดุ",
+            "minLength": 0,
+            "maxLength": 50
+          },
+          "markShipped": {
+            "type": "boolean",
+            "description": "true (ค่าเริ่มต้น) = ใส่เลขพัสดุครั้งแรกแล้วเปลี่ยนสถานะเป็น SHIPPED ให้เลย"
+          }
+        }
+      },
+      "UpdatePaymentSlipDto": {
+        "type": "object",
+        "properties": {
+          "paymentSlip": {
+            "type": "string",
+            "description": "URL หรือชื่อไฟล์สลิปโอนเงิน",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "paymentSlip"
+        ]
+      },
+      "CreateOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "description": "id ของตัวเลือกสินค้า",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "จำนวน",
+            "minimum": 1,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "variantId",
+          "quantity"
+        ]
+      },
+      "UpdateOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "description": "จำนวนใหม่",
+            "minimum": 1,
+            "maximum": 99
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "PickupLogOrderModel": {
+        "type": "object",
+        "properties": {
+          "pickupCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "paymentStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentStatus"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "customerEmail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pickupCode",
+          "orderStatus",
+          "paymentStatus",
+          "id",
+          "orderNumber",
+          "recipientName",
+          "customerEmail"
+        ]
+      },
+      "PickupLogModel": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "order": {
+            "$ref": "#/components/schemas/PickupLogOrderModel"
+          },
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "staffCoreUserId": {
+            "type": "string"
+          },
+          "staffEmail": {
+            "type": "string"
+          },
+          "pickupTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notes",
+          "order",
+          "id",
+          "orderId",
+          "staffCoreUserId",
+          "staffEmail",
+          "pickupTime",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreatePickupLogDto": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "id ของคำสั่งซื้อ (ส่งอย่างใดอย่างหนึ่งกับ pickupCode)",
+            "format": "uuid"
+          },
+          "pickupCode": {
+            "type": "string",
+            "description": "รหัสรับสินค้า เช่น PICKUP-123456",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "notes": {
+            "type": "string",
+            "description": "หมายเหตุ",
+            "maxLength": 500
+          }
+        }
+      },
+      "PickupVerificationModel": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/OrderModel"
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "true = ส่งมอบได้ (ชำระแล้ว · ไม่ถูกยกเลิก · ยังไม่เคยรับ)"
+          },
+          "alreadyPickedUp": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "order",
+          "valid",
+          "alreadyPickedUp"
+        ]
+      },
+      "CreatePickupVerificationDto": {
+        "type": "object",
+        "properties": {
+          "pickupCode": {
+            "type": "string",
+            "description": "รหัสรับสินค้าที่ลูกค้าแสดง (สแกนจาก QR ได้)",
+            "minLength": 1,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "pickupCode"
+        ]
+      },
+      "StatusCountModel": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ]
+      },
+      "OrderStatsModel": {
+        "type": "object",
+        "properties": {
+          "byOrderStatus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusCountModel"
+            }
+          },
+          "byPaymentStatus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusCountModel"
+            }
+          },
+          "totalOrders": {
+            "type": "number"
+          },
+          "paidRevenue": {
+            "type": "number",
+            "description": "ยอดขายที่ชำระแล้ว หน่วยสตางค์"
+          }
+        },
+        "required": [
+          "byOrderStatus",
+          "byPaymentStatus",
+          "totalOrders",
+          "paidRevenue"
+        ]
+      },
+      "ProductImageModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "ใส่ค่านี้ใน imageUrl ของสินค้า"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "contentType",
+          "size"
+        ]
+      }
+    }
+  }
+}
