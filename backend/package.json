@@ -12,7 +12,7 @@
     "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,test,prisma}/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "jest",
+    "test": "jest && jest --config ./test/jest-e2e.json",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "generate:openapi": "nest build && node dist/src/openapi/generate-openapi.js",
     "db:migrate": "prisma migrate dev",

@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { PermissionsGuard } from './auth/guards/permissions.guard';
-import { MeController } from './auth/me.controller';
+import { AuthModule } from './auth/auth.module';
 import { AppConfigModule } from './config/config.module';
 import { HealthController } from './health/health.controller';
 import { OrderItemsModule } from './order-items/order-items.module';
@@ -17,6 +15,7 @@ import { ProductsModule } from './products/products.module';
   imports: [
     AppConfigModule,
     PrismaModule,
+    AuthModule,
     ProductsModule,
     ProductVariantsModule,
     OrdersModule,
@@ -25,8 +24,6 @@ import { ProductsModule } from './products/products.module';
     OrderStatsModule,
     ProductImagesModule,
   ],
-  controllers: [HealthController, MeController],
-  // ยังไม่ได้เชื่อม Core Hub: ไม่มีตัวตนผู้ใช้ PermissionsGuard จึงปฏิเสธทุกเส้นทางที่ต้องมีสิทธิ์ (fail-closed)
-  providers: [{ provide: APP_GUARD, useClass: PermissionsGuard }],
+  controllers: [HealthController],
 })
 export class AppModule {}
