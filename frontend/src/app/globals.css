@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
+
+  /* ฝั่งนักศึกษา — น้ำเงินกรมท่าตามชุดสีของสาขา */
+  --color-navy-50: #f2f5fc;
+  --color-navy-100: #e3eafa;
+  --color-navy-200: #c7d4f2;
+  --color-navy-500: #3b5bc0;
+  --color-navy-700: #22357f;
+  --color-navy-900: #1a2666;
+  --color-navy-950: #141d4d;
+
+  /* ฝั่งเจ้าหน้าที่ — เขียวสำหรับงานตรวจรับ */
+  --color-jade-50: #e9f8f0;
+  --color-jade-100: #d3f0e1;
+  --color-jade-500: #17a06a;
+  --color-jade-600: #12855a;
+  --color-jade-700: #0d6a48;
+
+  --color-orchid-50: #f3efff;
+  --color-orchid-100: #e7e0ff;
+  --color-orchid-600: #6d35d6;
+  --color-orchid-700: #5a29b4;
+
+  --color-canvas: #f3f6fc;
+  --color-hairline: #e4eaf4;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-canvas text-navy-950 antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-navy-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* พื้นหลังจุดไข่ปลา ใช้เฉพาะขอบนอกของหน้าจอฝั่งนักศึกษา */
+.dotted-field {
+  background-image: radial-gradient(var(--color-navy-200) 1px, transparent 1px);
+  background-size: 14px 14px;
+}

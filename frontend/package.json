@@ -1,0 +1,22 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "หน้าเว็บ CSMJU-Shop (Next.js) — ฝั่งนักศึกษาและฝั่งเจ้าหน้าที่ ต่อกับ NestJS API",
+  "scripts": {
+    "dev": "next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^16.3.6",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  }
+}

@@ -1,0 +1,148 @@
+// ============================================================
+//  CSMJU-Shop : Prisma Schema
+//  Database : PostgreSQL  (csmju_shop)
+//  ออกแบบตาม ER Diagram : users, products, product_variants,
+//                          orders, order_items, pickup_logs
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// users : ผู้ใช้งาน (นักศึกษา / เจ้าหน้าที่ / แอดมิน)
+// ------------------------------------------------------------
+model User {
+  user_id    Int      @id @default(autoincrement())
+  student_id String?  @unique @db.VarChar(20)
+  fullname   String   @db.VarChar(100)
+  email      String   @unique @db.VarChar(100)
+  phone      String   @db.VarChar(15)
+  role       String?  @default("customer") @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  orders      Order[]
+  pickup_logs PickupLog[] @relation("StaffPickups")
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// products : สินค้า (1 สินค้า มีหลาย variant)
+// ------------------------------------------------------------
+model Product {
+  product_id         Int       @id @default(autoincrement())
+  name               String    @db.VarChar(150)
+  description        String?   @db.Text
+  category           String    @db.VarChar(50)
+  /// ที่อยู่รูปสินค้า เช่น /uploads/products/xxxx.jpg (ว่างได้ หน้าเว็บจะวาดภาพสำรองให้)
+  image_url          String?   @db.VarChar(255)
+  is_preorder        Boolean?  @default(false)
+  preorder_end_date  DateTime? @db.Timestamptz(6)
+  estimated_delivery DateTime? @db.Date
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  variants ProductVariant[]
+
+  @@index([category])
+  @@index([is_preorder])
+  @@map("products")
+}
+
+// ------------------------------------------------------------
+// product_variants : ตัวเลือกสินค้า (ไซส์ / สี) + ราคา + สต็อก
+// ------------------------------------------------------------
+model ProductVariant {
+  variant_id     Int     @id @default(autoincrement())
+  product_id     Int
+  variant_name   String  @db.VarChar(50)
+  price          Decimal @db.Decimal(10, 2)
+  stock_quantity Int?    @default(0)
+
+  // Relations
+  product     Product     @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: Cascade)
+  order_items OrderItem[]
+
+  @@unique([product_id, variant_name])
+  @@index([product_id])
+  @@map("product_variants")
+}
+
+// ------------------------------------------------------------
+// orders : คำสั่งซื้อ
+// ------------------------------------------------------------
+model Order {
+  order_id         Int      @id @default(autoincrement())
+  order_number     String   @unique @db.VarChar(20)
+  user_id          Int
+  total_amount     Decimal  @db.Decimal(10, 2)
+  delivery_method  String   @db.VarChar(20)
+  shipping_fee     Decimal? @default(0.00) @db.Decimal(10, 2)
+  shipping_address String?  @db.Text
+  payment_slip     String?  @db.VarChar(255)
+  payment_status   String?  @default("pending") @db.VarChar(20)
+  order_status     String?  @default("pending") @db.VarChar(20)
+  pickup_code      String?  @unique @db.VarChar(50)
+  /// ข้อมูลการจัดส่ง — ใช้เฉพาะ delivery_method = "delivery"
+  shipping_carrier String?  @db.VarChar(50)
+  tracking_number  String?  @db.VarChar(50)
+  shipped_at       DateTime? @db.Timestamptz(6)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user        User        @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
+  order_items OrderItem[]
+  pickup_logs PickupLog[]
+
+  @@index([user_id])
+  @@index([order_status])
+  @@index([payment_status])
+  @@index([tracking_number])
+  @@map("orders")
+}
+
+// ------------------------------------------------------------
+// order_items : รายการสินค้าในคำสั่งซื้อ
+// ------------------------------------------------------------
+model OrderItem {
+  item_id          Int      @id @default(autoincrement())
+  order_id         Int
+  variant_id       Int
+  quantity         Int
+  unit_price       Decimal  @db.Decimal(10, 2)
+  is_preorder_item Boolean? @default(false)
+
+  // Relations
+  order   Order          @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Cascade)
+  variant ProductVariant @relation(fields: [variant_id], references: [variant_id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([order_id])
+  @@index([variant_id])
+  @@map("order_items")
+}
+
+// ------------------------------------------------------------
+// pickup_logs : บันทึกการรับสินค้าหน้าร้าน (เจ้าหน้าที่เป็นผู้บันทึก)
+// ------------------------------------------------------------
+model PickupLog {
+  pickup_id   Int      @id @default(autoincrement())
+  order_id    Int
+  staff_id    Int
+  pickup_time DateTime @default(now()) @db.Timestamptz(6)
+  notes       String?  @db.Text
+
+  // Relations
+  order Order @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Cascade)
+  staff User  @relation("StaffPickups", fields: [staff_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([order_id])
+  @@index([staff_id])
+  @@map("pickup_logs")
+}

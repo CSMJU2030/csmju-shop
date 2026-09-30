@@ -1,0 +1,2364 @@
+{
+  "info": {
+    "_postman_id": "b7f1c2d0-csmju-shop-0001",
+    "name": "CSMJU-Shop API",
+    "description": "# CSMJU-Shop API — Postman Collection\n\nชุดทดสอบ REST API ของระบบร้านค้าสาขาวิทยาการคอมพิวเตอร์ ม.แม่โจ้\n(Express + Prisma + PostgreSQL)\n\n## วิธีใช้\n1. เปิดเซิร์ฟเวอร์: `npm run dev`\n2. Import ไฟล์นี้ + `CSMJU-Shop.postman_environment.json` เข้า Postman\n3. เลือก Environment เป็น **CSMJU-Shop Local**\n4. กด **Run collection** เพื่อยิงทุก request ตามลำดับ (แนะนำ) หรือกดยิงทีละอันก็ได้\n\n## ลำดับการทำงาน\nโฟลเดอร์เรียงตามลำดับที่ควรรัน — โฟลเดอร์ 02/03 จะเก็บ id ของสินค้าที่สร้างใหม่ไว้ในตัวแปร\nแล้วโฟลเดอร์ 04–06 จะหยิบตัวแปรนั้นไปใช้ต่อ สุดท้ายโฟลเดอร์ 08 จะลบข้อมูลทดสอบออกให้\n\n## ตัวแปรที่ใช้\n| ตัวแปร | ความหมาย |\n|---|---|\n| `base_url` | ที่อยู่ API (ค่าเริ่มต้น http://localhost:3000) |\n| `user_id` | id ลูกค้าจาก seed |\n| `staff_id` | id เจ้าหน้าที่จาก seed |\n| `product_id` / `variant_id` | สินค้าและตัวเลือกจาก seed |\n| `order_id` / `order_number` | คำสั่งซื้อจาก seed |\n| `new_*` | ค่าที่ถูกเซ็ตอัตโนมัติจาก response ระหว่างรัน |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 — System",
+      "id": "csmju-0053",
+      "description": "ตรวจสอบว่า API และฐานข้อมูลพร้อมใช้งาน",
+      "item": [
+        {
+          "name": "GET / — ข้อมูล API",
+          "id": "csmju-0001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
+            },
+            "description": "ดูรายชื่อ endpoint ทั้งหมดแบบย่อ"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"ตอบกลับภายใน 2 วินาที\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/health — ตรวจสอบการเชื่อมต่อฐานข้อมูล",
+          "id": "csmju-0002",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "ยิงอันนี้ก่อนเสมอ ถ้าได้ database: connected แปลว่า PostgreSQL + Prisma พร้อมใช้งาน"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"database connected\", () => pm.expect(pm.response.json().data.database).to.eql(\"connected\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 — Users (ผู้ใช้)",
+      "id": "csmju-0054",
+      "description": "CRUD ตาราง users",
+      "item": [
+        {
+          "name": "GET /api/users — รายการผู้ใช้ทั้งหมด",
+          "id": "csmju-0003",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "สมชาย",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "รองรับ page, limit, role (customer/staff/admin), search (ชื่อ/อีเมล/รหัสนักศึกษา)"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));",
+                  "pm.test(\"มี meta สำหรับแบ่งหน้า\", () => pm.expect(pm.response.json().meta).to.have.property(\"total\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/users/:id — ผู้ใช้รายคน",
+          "id": "csmju-0004",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "คืนข้อมูลผู้ใช้ พร้อมออร์เดอร์ล่าสุด 10 รายการ"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"มี user_id\", () => pm.expect(pm.response.json().data).to.have.property(\"user_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/users — สร้างผู้ใช้ใหม่",
+          "id": "csmju-0005",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "email และ student_id ห้ามซ้ำ (unique). role ต้องเป็น customer / staff / admin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": \"6604101888\",\n  \"fullname\": \"ทดสอบ จากโพสต์แมน\",\n  \"email\": \"postman.test@csmju.ac.th\",\n  \"phone\": \"0870000000\",\n  \"role\": \"customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"new_user_id\", pm.response.json().data.user_id);\nconsole.log(\"new_user_id =\", pm.collectionVariables.get(\"new_user_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/users/:id — แก้ไขผู้ใช้",
+          "id": "csmju-0006",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{new_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{new_user_id}}"
+              ]
+            },
+            "description": "ส่งเฉพาะฟิลด์ที่ต้องการแก้",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"ทดสอบ แก้ไขชื่อแล้ว\",\n  \"phone\": \"0871111111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/users/:id — ลบผู้ใช้",
+          "id": "csmju-0007",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{new_user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{new_user_id}}"
+              ]
+            },
+            "description": "ลบไม่ได้ถ้าผู้ใช้มีคำสั่งซื้ออยู่ (จะได้ 409)"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 — Products (สินค้า)",
+      "id": "csmju-0055",
+      "description": "CRUD ตาราง products พร้อมสร้าง variants ในคราวเดียว",
+      "item": [
+        {
+          "name": "GET /api/products — รายการสินค้า (พร้อม variants)",
+          "id": "csmju-0008",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "category",
+                  "value": "ของที่ระลึก",
+                  "disabled": true
+                },
+                {
+                  "key": "is_preorder",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "โปโล",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));",
+                  "pm.test(\"มี meta สำหรับแบ่งหน้า\", () => pm.expect(pm.response.json().meta).to.have.property(\"total\"));",
+                  "pm.test(\"สินค้าแต่ละชิ้นมี variants\", () => { const d = pm.response.json().data; if (d.length) pm.expect(d[0]).to.have.property(\"variants\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/products/categories/all — หมวดหมู่ทั้งหมด",
+          "id": "csmju-0009",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/categories/all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "categories",
+                "all"
+              ]
+            },
+            "description": "คืนชื่อหมวดหมู่พร้อมจำนวนสินค้าในแต่ละหมวด"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/products/:id — สินค้ารายชิ้น",
+          "id": "csmju-0010",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{product_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/products — สร้างสินค้าพร้อม variants",
+          "id": "csmju-0011",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "สร้างสินค้าและตัวเลือกย่อยในครั้งเดียว ถ้า is_preorder = true ต้องมี preorder_end_date ด้วย",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"สมุดโน้ต CSMJU Notebook\",\n  \"description\": \"สมุดปกแข็ง A5 100 แผ่น สกรีนโลโก้สาขา\",\n  \"category\": \"เครื่องเขียน\",\n  \"is_preorder\": false,\n  \"variants\": [\n    {\n      \"variant_name\": \"ปกเขียว\",\n      \"price\": 120,\n      \"stock_quantity\": 40\n    },\n    {\n      \"variant_name\": \"ปกดำ\",\n      \"price\": 120,\n      \"stock_quantity\": 35\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"new_product_id\", pm.response.json().data.product_id);\nconsole.log(\"new_product_id =\", pm.collectionVariables.get(\"new_product_id\"));",
+                  "pm.collectionVariables.set(\"new_variant_id\", pm.response.json().data.variants[0].variant_id);\nconsole.log(\"new_variant_id =\", pm.collectionVariables.get(\"new_variant_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/products — สร้างสินค้าพรีออเดอร์",
+          "id": "csmju-0012",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "สินค้าพรีออเดอร์สั่งได้แม้สต็อกเป็น 0",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"เสื้อแจ็คเก็ต CSMJU Varsity (Pre-Order)\",\n  \"description\": \"แจ็คเก็ตรุ่นพิเศษ เปิดพรีออเดอร์รอบเดียว\",\n  \"category\": \"เสื้อผ้าพรีออเดอร์\",\n  \"is_preorder\": true,\n  \"preorder_end_date\": \"2026-11-30T23:59:59Z\",\n  \"estimated_delivery\": \"2026-12-20\",\n  \"variants\": [\n    {\n      \"variant_name\": \"Size M\",\n      \"price\": 1290,\n      \"stock_quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"preorder_product_id\", pm.response.json().data.product_id);\nconsole.log(\"preorder_product_id =\", pm.collectionVariables.get(\"preorder_product_id\"));",
+                  "pm.collectionVariables.set(\"preorder_variant_id\", pm.response.json().data.variants[0].variant_id);\nconsole.log(\"preorder_variant_id =\", pm.collectionVariables.get(\"preorder_variant_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/products/:id — แก้ไขสินค้า",
+          "id": "csmju-0013",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{new_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{new_product_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"อัปเดตรายละเอียดจาก Postman\",\n  \"category\": \"เครื่องเขียน\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 — Product Variants (ตัวเลือกสินค้า)",
+      "id": "csmju-0056",
+      "description": "CRUD ตาราง product_variants และการปรับสต็อก",
+      "item": [
+        {
+          "name": "GET /api/variants — ตัวเลือกสินค้าทั้งหมด",
+          "id": "csmju-0014",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/variants?",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "{{product_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "in_stock",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/variants/:id — ตัวเลือกรายการเดียว",
+          "id": "csmju-0015",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/variants/{{variant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants",
+                "{{variant_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/variants — เพิ่มตัวเลือกให้สินค้าเดิม",
+          "id": "csmju-0016",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/variants",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants"
+              ]
+            },
+            "description": "product_id + variant_name ห้ามซ้ำกัน",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{new_product_id}}\",\n  \"variant_name\": \"ปกน้ำเงิน\",\n  \"price\": 125,\n  \"stock_quantity\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"extra_variant_id\", pm.response.json().data.variant_id);\nconsole.log(\"extra_variant_id =\", pm.collectionVariables.get(\"extra_variant_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/variants/:id — แก้ไขราคา/ชื่อ",
+          "id": "csmju-0017",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/variants/{{extra_variant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants",
+                "{{extra_variant_id}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 135,\n  \"variant_name\": \"ปกน้ำเงินเข้ม\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/variants/:id/stock — เพิ่ม/ลดสต็อก",
+          "id": "csmju-0018",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/variants/{{extra_variant_id}}/stock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants",
+                "{{extra_variant_id}}",
+                "stock"
+              ]
+            },
+            "description": "ใช้ adjust สำหรับบวก/ลบ (เช่น -5) หรือใช้ set เพื่อกำหนดค่าตรง ๆ เช่น {\"set\": 100}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adjust\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"สต็อกเพิ่มเป็น 35\", () => pm.expect(pm.response.json().data.stock_quantity).to.eql(35));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/variants/:id — ลบตัวเลือก",
+          "id": "csmju-0019",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/variants/{{extra_variant_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "variants",
+                "{{extra_variant_id}}"
+              ]
+            },
+            "description": "ลบไม่ได้ถ้าเคยถูกสั่งซื้อไปแล้ว (409)"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 — Orders (คำสั่งซื้อ)",
+      "id": "csmju-0057",
+      "description": "สร้าง/ดู/อัปเดตสถานะคำสั่งซื้อ พร้อมตัดสต็อกอัตโนมัติ",
+      "item": [
+        {
+          "name": "GET /api/orders — รายการคำสั่งซื้อ",
+          "id": "csmju-0020",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "order_status",
+                  "value": "pending",
+                  "disabled": true
+                },
+                {
+                  "key": "payment_status",
+                  "value": "paid",
+                  "disabled": true
+                },
+                {
+                  "key": "delivery_method",
+                  "value": "pickup",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));",
+                  "pm.test(\"มี meta สำหรับแบ่งหน้า\", () => pm.expect(pm.response.json().meta).to.have.property(\"total\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/orders/stats/summary — สรุปยอดสำหรับ dashboard",
+          "id": "csmju-0021",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/stats/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "stats",
+                "summary"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"มี total_orders\", () => pm.expect(pm.response.json().data).to.have.property(\"total_orders\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/orders/:id — คำสั่งซื้อรายการเดียว",
+          "id": "csmju-0022",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "คืนข้อมูลพร้อม user, order_items (+สินค้า) และ pickup_logs"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"มี order_items\", () => pm.expect(pm.response.json().data).to.have.property(\"order_items\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/orders/number/:orderNumber — ค้นด้วยเลขที่ออร์เดอร์",
+          "id": "csmju-0023",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/number/{{order_number}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "number",
+                "{{order_number}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/orders — สร้างคำสั่งซื้อ (รับหน้าร้าน)",
+          "id": "csmju-0024",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "ระบบจะตรวจสต็อก → ตัดสต็อก → คำนวณ total_amount → สร้างเลขที่ออร์เดอร์และ pickup_code ให้อัตโนมัติ ทั้งหมดอยู่ใน transaction เดียว",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"delivery_method\": \"pickup\",\n  \"items\": [\n    {\n      \"variant_id\": \"{{new_variant_id}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"new_order_id\", pm.response.json().data.order_id);\nconsole.log(\"new_order_id =\", pm.collectionVariables.get(\"new_order_id\"));",
+                  "pm.collectionVariables.set(\"new_pickup_code\", pm.response.json().data.pickup_code);\nconsole.log(\"new_pickup_code =\", pm.collectionVariables.get(\"new_pickup_code\"));",
+                  "pm.test(\"มี pickup_code\", () => pm.expect(pm.response.json().data.pickup_code).to.be.a(\"string\"));",
+                  "pm.test(\"total_amount = 240\", () => pm.expect(Number(pm.response.json().data.total_amount)).to.eql(240));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/orders — สร้างคำสั่งซื้อ (จัดส่ง)",
+          "id": "csmju-0025",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "แบบ delivery ต้องมี shipping_address เสมอ และ total_amount จะรวมค่าส่งให้",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"delivery_method\": \"delivery\",\n  \"shipping_fee\": 50,\n  \"shipping_address\": \"123 หมู่ 4 ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290\",\n  \"items\": [\n    {\n      \"variant_id\": \"{{preorder_variant_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"delivery_order_id\", pm.response.json().data.order_id);\nconsole.log(\"delivery_order_id =\", pm.collectionVariables.get(\"delivery_order_id\"));",
+                  "pm.test(\"total = 1290 + 50\", () => pm.expect(Number(pm.response.json().data.total_amount)).to.eql(1340));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/orders/:id/payment-slip — แนบสลิปโอนเงิน",
+          "id": "csmju-0026",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}/payment-slip",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}",
+                "payment-slip"
+              ]
+            },
+            "description": "แนบสลิปแล้ว payment_status จะเปลี่ยนเป็น waiting_verify อัตโนมัติ",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_slip\": \"https://example.com/slips/postman_test.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"payment_status = waiting_verify\", () => pm.expect(pm.response.json().data.payment_status).to.eql(\"waiting_verify\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/orders/:id/payment-status — ยืนยันการชำระเงิน",
+          "id": "csmju-0027",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}/payment-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}",
+                "payment-status"
+              ]
+            },
+            "description": "ค่าที่รับได้: pending, waiting_verify, paid, rejected, refunded — เมื่อเป็น paid ระบบจะตั้ง order_status = confirmed ให้",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_status\": \"paid\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"order_status = confirmed\", () => pm.expect(pm.response.json().data.order_status).to.eql(\"confirmed\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/orders/:id/order-status — อัปเดตสถานะออร์เดอร์",
+          "id": "csmju-0028",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}/order-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}",
+                "order-status"
+              ]
+            },
+            "description": "ค่าที่รับได้: pending, confirmed, preparing, ready_for_pickup, shipped, completed, cancelled",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_status\": \"ready_for_pickup\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/orders/:id — ลบคำสั่งซื้อ (คืนสต็อกอัตโนมัติ)",
+          "id": "csmju-0029",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{delivery_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{delivery_order_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 — Order Items (รายการในคำสั่งซื้อ)",
+      "id": "csmju-0058",
+      "description": "เพิ่ม/แก้/ลบสินค้าในออร์เดอร์ พร้อมคำนวณยอดใหม่",
+      "item": [
+        {
+          "name": "GET /api/orders/:orderId/items — รายการสินค้าในออร์เดอร์",
+          "id": "csmju-0030",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}",
+                "items"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/orders/:orderId/items — เพิ่มสินค้าเข้าออร์เดอร์",
+          "id": "csmju-0031",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}/items",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}",
+                "items"
+              ]
+            },
+            "description": "ระบบจะตัดสต็อกและคำนวณ total_amount ของออร์เดอร์ใหม่ให้อัตโนมัติ",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": \"{{variant_id}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"new_item_id\", pm.response.json().data.item_id);\nconsole.log(\"new_item_id =\", pm.collectionVariables.get(\"new_item_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/order-items/:id — รายการสินค้ารายการเดียว",
+          "id": "csmju-0032",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/order-items/{{new_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "order-items",
+                "{{new_item_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/order-items/:id — แก้จำนวน",
+          "id": "csmju-0033",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/order-items/{{new_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "order-items",
+                "{{new_item_id}}"
+              ]
+            },
+            "description": "ปรับสต็อกตามส่วนต่างและคำนวณยอดรวมใหม่",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"quantity = 3\", () => pm.expect(pm.response.json().data.quantity).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/order-items/:id — ลบรายการ (คืนสต็อก)",
+          "id": "csmju-0034",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/order-items/{{new_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "order-items",
+                "{{new_item_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 — Pickup Logs (การรับสินค้า)",
+      "id": "csmju-0059",
+      "description": "ตรวจรหัสรับสินค้า และบันทึกการส่งมอบโดยเจ้าหน้าที่",
+      "item": [
+        {
+          "name": "POST /api/pickup-logs/verify — ตรวจสอบรหัสรับสินค้า",
+          "id": "csmju-0035",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs",
+                "verify"
+              ]
+            },
+            "description": "ใช้ตอนลูกค้ามาถึงหน้าร้าน สแกน/กรอกรหัสเพื่อดูว่าออร์เดอร์นี้ชำระเงินแล้วหรือยัง และเคยรับไปหรือยัง",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_code\": \"{{new_pickup_code}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"valid = true\", () => pm.expect(pm.response.json().data.valid).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/pickup-logs — บันทึกการรับสินค้า",
+          "id": "csmju-0036",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs"
+              ]
+            },
+            "description": "ผู้บันทึกต้องมี role = staff หรือ admin และออร์เดอร์ต้องชำระเงินแล้ว เมื่อบันทึกสำเร็จ order_status จะกลายเป็น completed\nสามารถส่ง order_id แทน pickup_code ก็ได้",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_code\": \"{{new_pickup_code}}\",\n  \"staff_id\": \"{{staff_id}}\",\n  \"notes\": \"ตรวจรหัสถูกต้อง ส่งมอบสินค้าแล้ว\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.collectionVariables.set(\"new_pickup_id\", pm.response.json().data.pickup_id);\nconsole.log(\"new_pickup_id =\", pm.collectionVariables.get(\"new_pickup_id\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/pickup-logs — ประวัติการรับสินค้า",
+          "id": "csmju-0037",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "staff_id",
+                  "value": "{{staff_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "order_id",
+                  "value": "{{order_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "pm.test(\"data เป็น array\", () => pm.expect(pm.response.json().data).to.be.an(\"array\"));",
+                  "pm.test(\"มี meta สำหรับแบ่งหน้า\", () => pm.expect(pm.response.json().meta).to.have.property(\"total\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/pickup-logs/:id — บันทึกรายการเดียว",
+          "id": "csmju-0038",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs/{{new_pickup_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs",
+                "{{new_pickup_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/pickup-logs/:id — ลบบันทึก",
+          "id": "csmju-0039",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs/{{new_pickup_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs",
+                "{{new_pickup_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 — Negative Tests (ทดสอบกรณีผิดพลาด)",
+      "id": "csmju-0060",
+      "description": "ตรวจว่า API คืน error code ถูกต้อง (400/403/404/409/422)",
+      "item": [
+        {
+          "name": "404 — endpoint ที่ไม่มีอยู่",
+          "id": "csmju-0040",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ไม่มี-endpoint-นี้",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ไม่มี-endpoint-นี้"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 — ผู้ใช้ที่ไม่มีอยู่",
+          "id": "csmju-0041",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999999"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 — สร้างผู้ใช้โดยไม่ส่งฟิลด์บังคับ",
+          "id": "csmju-0042",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"ข้อมูลไม่ครบ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 — สร้างผู้ใช้อีเมลซ้ำ",
+          "id": "csmju-0043",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "อีเมลนี้มีอยู่แล้วจาก seed → Prisma P2002 → 409",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"อีเมลซ้ำ\",\n  \"email\": \"somchai.r@csmju.ac.th\",\n  \"phone\": \"0800000009\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 — สินค้าพรีออเดอร์ไม่ระบุวันปิดรับ",
+          "id": "csmju-0044",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"สินค้าทดสอบ\",\n  \"category\": \"ทดสอบ\",\n  \"is_preorder\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 — สั่งซื้อแบบ delivery โดยไม่ระบุที่อยู่",
+          "id": "csmju-0045",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"delivery_method\": \"delivery\",\n  \"items\": [\n    {\n      \"variant_id\": \"{{variant_id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 — สั่งซื้อเกินจำนวนสต็อก",
+          "id": "csmju-0046",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/orders",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"delivery_method\": \"pickup\",\n  \"items\": [\n    {\n      \"variant_id\": \"{{variant_id}}\",\n      \"quantity\": 999999\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 — customer พยายามบันทึกการรับสินค้า",
+          "id": "csmju-0047",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs"
+              ]
+            },
+            "description": "staff_id ที่ส่งมาเป็น role = customer จึงถูกปฏิเสธ",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"staff_id\": \"{{user_id}}\",\n  \"notes\": \"ไม่ควรผ่าน\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 — ตรวจสอบรหัสรับสินค้าที่ไม่มีอยู่",
+          "id": "csmju-0048",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pickup-logs/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "pickup-logs",
+                "verify"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickup_code\": \"PICKUP-000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 — ลบผู้ใช้ที่มีคำสั่งซื้ออยู่",
+          "id": "csmju-0049",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"success = false\", () => pm.expect(pm.response.json().success).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 — Cleanup (ล้างข้อมูลทดสอบ)",
+      "id": "csmju-0061",
+      "description": "ลบข้อมูลที่สร้างขึ้นระหว่างการทดสอบ",
+      "item": [
+        {
+          "name": "DELETE /api/orders/:id — ลบออร์เดอร์ที่สร้างระหว่างทดสอบ",
+          "id": "csmju-0050",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/orders/{{new_order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{new_order_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/products/:id — ลบสินค้าทดสอบ (สมุดโน้ต)",
+          "id": "csmju-0051",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{new_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{new_product_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/products/:id — ลบสินค้าทดสอบ (แจ็คเก็ตพรีออเดอร์)",
+          "id": "csmju-0052",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/products/{{preorder_product_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{preorder_product_id}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status = 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"success = true\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// ใช้ค่า base_url จาก environment ถ้ามี",
+          "if (!pm.collectionVariables.get(\"base_url\")) {",
+          "  pm.collectionVariables.set(\"base_url\", \"http://localhost:3000\");",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "staff_id",
+      "value": "3",
+      "type": "string"
+    },
+    {
+      "key": "product_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "variant_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "order_number",
+      "value": "ORD-202609-0001",
+      "type": "string"
+    },
+    {
+      "key": "pickup_code",
+      "value": "PICKUP-88421",
+      "type": "string"
+    },
+    {
+      "key": "new_user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_variant_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "extra_variant_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "preorder_product_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "preorder_variant_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "delivery_order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_item_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_pickup_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "new_pickup_code",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

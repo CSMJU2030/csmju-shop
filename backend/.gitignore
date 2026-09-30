@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+dist/
+.DS_Store
+
+# รูปที่ผู้ใช้อัปโหลดตอนรัน — ห้าม commit
+uploads/
