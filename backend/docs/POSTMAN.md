@@ -114,14 +114,14 @@ pm.collectionVariables.set("new_order_id", pm.response.json().data.order_id);
 
 | ตัวแปร | ถูกเซ็ตจาก |
 |---|---|
-| `new_user_id` | POST /api/users |
-| `new_product_id`, `new_variant_id` | POST /api/products (สมุดโน้ต) |
-| `preorder_product_id`, `preorder_variant_id` | POST /api/products (แจ็คเก็ตพรีออเดอร์) |
-| `extra_variant_id` | POST /api/variants |
-| `new_order_id`, `new_pickup_code` | POST /api/orders |
-| `delivery_order_id` | POST /api/orders (แบบจัดส่ง) |
-| `new_item_id` | POST /api/orders/:id/items |
-| `new_pickup_id` | POST /api/pickup-logs |
+| `new_user_id` | POST /api/v1/users |
+| `new_product_id`, `new_variant_id` | POST /api/v1/products (สมุดโน้ต) |
+| `preorder_product_id`, `preorder_variant_id` | POST /api/v1/products (แจ็คเก็ตพรีออเดอร์) |
+| `extra_variant_id` | POST /api/v1/variants |
+| `new_order_id`, `new_pickup_code` | POST /api/v1/orders |
+| `delivery_order_id` | POST /api/v1/orders (แบบจัดส่ง) |
+| `new_item_id` | POST /api/v1/orders/:id/items |
+| `new_pickup_id` | POST /api/v1/pickup-logs |
 
 ดูค่าปัจจุบันได้ที่ไอคอนตามุมขวาบน หรือใน tab **Console** (ทุก request ที่เซ็ตตัวแปรจะ log ค่าออกมา)
 
@@ -140,8 +140,8 @@ pm.test("success = true", () => pm.expect(pm.response.json().success).to.eql(tru
 
 | Request | ตรวจอะไรเพิ่ม |
 |---|---|
-| POST /api/orders (pickup) | `total_amount` = 240 และมี `pickup_code` |
-| POST /api/orders (delivery) | `total_amount` = 1290 + 50 = 1340 (รวมค่าส่งถูกต้อง) |
+| POST /api/v1/orders (pickup) | `total_amount` = 240 และมี `pickup_code` |
+| POST /api/v1/orders (delivery) | `total_amount` = 1290 + 50 = 1340 (รวมค่าส่งถูกต้อง) |
 | PATCH payment-slip | `payment_status` เปลี่ยนเป็น `waiting_verify` |
 | PATCH payment-status = paid | `order_status` เปลี่ยนเป็น `confirmed` |
 | PATCH variants/:id/stock | สต็อกเพิ่มเป็น 35 (25 + 10) |
@@ -161,8 +161,8 @@ pm.test("success = true", () => pm.expect(pm.response.json().success).to.eql(tru
 | `Error: P3005 The database schema is not empty` | ฐานข้อมูลมีตารางจาก `db push` แต่ไม่มีประวัติ migration → `npx prisma migrate reset --force` แล้ว `npm run seed` |
 | ทุก request ได้ 404 ทั้งที่ server รันอยู่ | ลืม `/api` นำหน้า — ทุก endpoint อยู่ใต้ `/api` ยกเว้นหน้าแรก `/` |
 | ส่งฟิลด์เพิ่มไปแต่ไม่บันทึกลงฐานข้อมูล | `ValidationPipe` ตั้ง `whitelist: true` ฟิลด์ที่ไม่ได้ประกาศใน DTO จะถูกตัดทิ้ง |
-| GET /api/users/1 ได้ 404 | ยังไม่ได้ seed → `npm run seed` |
-| POST /api/users ได้ 409 | อีเมลซ้ำ — seed ใหม่หรือเปลี่ยนอีเมลใน body |
+| GET /api/v1/users/1 ได้ 404 | ยังไม่ได้ seed → `npm run seed` |
+| POST /api/v1/users ได้ 409 | อีเมลซ้ำ — seed ใหม่หรือเปลี่ยนอีเมลใน body |
 | โฟลเดอร์ 04–06 พังเป็นแถว | ยิงข้ามลำดับ ตัวแปร `new_*` ยังว่าง → รันทั้ง collection แทน |
 | `Cannot read properties of undefined` ใน test | request ก่อนหน้าล้มเหลว ทำให้ไม่มีค่าให้อ่าน — ดูว่า request ไหนแดงก่อน |
 

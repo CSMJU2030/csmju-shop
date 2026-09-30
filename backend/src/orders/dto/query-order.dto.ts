@@ -1,14 +1,11 @@
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { DELIVERY_METHODS, ORDER_STATUSES, PAYMENT_STATUSES } from '../../common/constants.js';
 
 export class QueryOrderDto extends PaginationQueryDto {
   @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'user_id ต้องเป็นจำนวนเต็ม' })
-  @Min(1)
-  user_id?: number;
+  @IsString({ message: 'core_user_id ต้องเป็นข้อความ' })
+  core_user_id?: string;
 
   @IsOptional()
   @IsIn(ORDER_STATUSES, {

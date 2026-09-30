@@ -1,5 +1,13 @@
 # API — CSMJU-Shop
 
+> **ปรับให้ตรงมาตรฐาน CSMJU2030 (1 ต.ค. 2569)**
+> - endpoint ธุรกิจย้ายไปอยู่ใต้ `/api/v1/...` ส่วน `/api/health` คงเดิม
+> - **เลิกใช้ตาราง `users` และ endpoint `/api/v1/users`** — ผู้ใช้เป็นของ Core Hub
+>   คำสั่งซื้ออ้างผู้สั่งด้วย `core_user_id` + snapshot `customer_name`, `customer_email`,
+>   `customer_phone`, `customer_student_id` · บันทึกรับสินค้าใช้ `staff_core_user_id` + `staff_name`
+> - เนื้อหาเกี่ยวกับ users ด้านล่างเป็นของเวอร์ชันก่อนหน้า เก็บไว้เป็นประวัติ
+
+
 Base URL: `http://localhost:3000`
 Framework: **NestJS 12** · ทุก endpoint ภายใต้ `/api` (ยกเว้น `/`) · รับ-ส่งเป็น JSON (`Content-Type: application/json`)
 
@@ -91,13 +99,13 @@ curl http://localhost:3000/api/health
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/users` | รายการผู้ใช้ |
-| GET | `/api/users/:id` | ผู้ใช้รายคน (พร้อมออร์เดอร์ล่าสุด 10 รายการ) |
-| POST | `/api/users` | สร้างผู้ใช้ |
-| PUT | `/api/users/:id` | แก้ไขผู้ใช้ |
-| DELETE | `/api/users/:id` | ลบผู้ใช้ |
+| GET | `/api/v1/users` | รายการผู้ใช้ |
+| GET | `/api/v1/users/:id` | ผู้ใช้รายคน (พร้อมออร์เดอร์ล่าสุด 10 รายการ) |
+| POST | `/api/v1/users` | สร้างผู้ใช้ |
+| PUT | `/api/v1/users/:id` | แก้ไขผู้ใช้ |
+| DELETE | `/api/v1/users/:id` | ลบผู้ใช้ |
 
-**Query parameters ของ GET `/api/users`**
+**Query parameters ของ GET `/api/v1/users`**
 
 | ชื่อ | ตัวอย่าง | ความหมาย |
 |---|---|---|
@@ -106,7 +114,7 @@ curl http://localhost:3000/api/health
 | `role` | `staff` | กรองตามบทบาท |
 | `search` | `สมชาย` | ค้นจากชื่อ / อีเมล / รหัสนักศึกษา |
 
-**POST `/api/users`**
+**POST `/api/v1/users`**
 
 ```json
 {
@@ -122,7 +130,7 @@ curl http://localhost:3000/api/health
 - `email` และ `student_id` ห้ามซ้ำ → ซ้ำได้ **409**
 - `role` ต้องเป็น `customer` / `staff` / `admin` → ผิดได้ **422**
 
-**DELETE `/api/users/:id`** — ลบไม่ได้ถ้าผู้ใช้มีคำสั่งซื้ออยู่ → **409**
+**DELETE `/api/v1/users/:id`** — ลบไม่ได้ถ้าผู้ใช้มีคำสั่งซื้ออยู่ → **409**
 
 ---
 
@@ -130,14 +138,14 @@ curl http://localhost:3000/api/health
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/products` | รายการสินค้า (แนบ variants มาด้วย) |
-| GET | `/api/products/categories/all` | รายชื่อหมวดหมู่ + จำนวนสินค้า |
-| GET | `/api/products/:id` | สินค้ารายชิ้น |
-| POST | `/api/products` | สร้างสินค้า (สร้าง variants พร้อมกันได้) |
-| PUT | `/api/products/:id` | แก้ไขสินค้า |
-| DELETE | `/api/products/:id` | ลบสินค้า (variants หายตาม) |
+| GET | `/api/v1/products` | รายการสินค้า (แนบ variants มาด้วย) |
+| GET | `/api/v1/products/categories/all` | รายชื่อหมวดหมู่ + จำนวนสินค้า |
+| GET | `/api/v1/products/:id` | สินค้ารายชิ้น |
+| POST | `/api/v1/products` | สร้างสินค้า (สร้าง variants พร้อมกันได้) |
+| PUT | `/api/v1/products/:id` | แก้ไขสินค้า |
+| DELETE | `/api/v1/products/:id` | ลบสินค้า (variants หายตาม) |
 
-**Query parameters ของ GET `/api/products`**
+**Query parameters ของ GET `/api/v1/products`**
 
 | ชื่อ | ตัวอย่าง | ความหมาย |
 |---|---|---|
@@ -146,7 +154,7 @@ curl http://localhost:3000/api/health
 | `is_preorder` | `true` | เฉพาะสินค้าพรีออเดอร์ |
 | `search` | `โปโล` | ค้นจากชื่อ / รายละเอียด |
 
-**POST `/api/products`**
+**POST `/api/v1/products`**
 
 ```json
 {
@@ -163,11 +171,11 @@ curl http://localhost:3000/api/health
 ```
 
 - บังคับ: `name`, `category`
-- `image_url` ใส่หรือไม่ใส่ก็ได้ — ได้มาจาก [POST `/api/uploads/image`](#uploads--รูปสินค้า) · ส่งค่าว่างตอน PUT = เอารูปออก
+- `image_url` ใส่หรือไม่ใส่ก็ได้ — ได้มาจาก [POST `/api/v1/uploads/image`](#uploads--รูปสินค้า) · ส่งค่าว่างตอน PUT = เอารูปออก
 - ถ้า `is_preorder: true` ต้องมี `preorder_end_date` ด้วย → ไม่มีได้ **422**
 - แต่ละ variant ต้องมี `variant_name` และ `price`
 
-**DELETE `/api/products/:id`** — ลบไม่ได้ถ้ามีสินค้าชิ้นนี้อยู่ในคำสั่งซื้อแล้ว → **409**
+**DELETE `/api/v1/products/:id`** — ลบไม่ได้ถ้ามีสินค้าชิ้นนี้อยู่ในคำสั่งซื้อแล้ว → **409**
 
 ---
 
@@ -175,22 +183,22 @@ curl http://localhost:3000/api/health
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/variants` | รายการตัวเลือกสินค้า |
-| GET | `/api/variants/:id` | ตัวเลือกรายการเดียว |
-| POST | `/api/variants` | เพิ่มตัวเลือกให้สินค้าที่มีอยู่ |
-| PUT | `/api/variants/:id` | แก้ชื่อ / ราคา / สต็อก |
-| PATCH | `/api/variants/:id/stock` | ปรับสต็อกโดยเฉพาะ |
-| DELETE | `/api/variants/:id` | ลบตัวเลือก |
+| GET | `/api/v1/variants` | รายการตัวเลือกสินค้า |
+| GET | `/api/v1/variants/:id` | ตัวเลือกรายการเดียว |
+| POST | `/api/v1/variants` | เพิ่มตัวเลือกให้สินค้าที่มีอยู่ |
+| PUT | `/api/v1/variants/:id` | แก้ชื่อ / ราคา / สต็อก |
+| PATCH | `/api/v1/variants/:id/stock` | ปรับสต็อกโดยเฉพาะ |
+| DELETE | `/api/v1/variants/:id` | ลบตัวเลือก |
 
-**Query parameters ของ GET `/api/variants`**: `product_id`, `in_stock=true` (เฉพาะที่ยังมีของ)
+**Query parameters ของ GET `/api/v1/variants`**: `product_id`, `in_stock=true` (เฉพาะที่ยังมีของ)
 
-**POST `/api/variants`**
+**POST `/api/v1/variants`**
 
 ```json
 { "product_id": 5, "variant_name": "ปกน้ำเงิน", "price": 125, "stock_quantity": 25 }
 ```
 
-**PATCH `/api/variants/:id/stock`** — เลือกใช้อย่างใดอย่างหนึ่ง
+**PATCH `/api/v1/variants/:id/stock`** — เลือกใช้อย่างใดอย่างหนึ่ง
 
 ```json
 { "adjust": 10 }     // เพิ่ม 10 (ใส่ -5 เพื่อลด)
@@ -205,12 +213,12 @@ curl http://localhost:3000/api/health
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| POST | `/api/uploads/image` | อัปโหลดรูป (multipart/form-data ฟิลด์ชื่อ `file`) |
-| DELETE | `/api/uploads/image?url=...` | ลบไฟล์รูปที่ไม่ได้ใช้แล้ว |
+| POST | `/api/v1/uploads/image` | อัปโหลดรูป (multipart/form-data ฟิลด์ชื่อ `file`) |
+| DELETE | `/api/v1/uploads/image?url=...` | ลบไฟล์รูปที่ไม่ได้ใช้แล้ว |
 | GET | `/uploads/products/<ชื่อไฟล์>` | เปิดดูรูป (ไม่มี prefix `/api` เพราะเป็นไฟล์) |
 
 ```bash
-curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
+curl -X POST http://localhost:3000/api/v1/uploads/image -F "file=@polo.jpg"
 ```
 
 ```json
@@ -245,20 +253,20 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/orders` | รายการคำสั่งซื้อ |
-| GET | `/api/orders/stats/summary` | สรุปยอดสำหรับ dashboard |
-| GET | `/api/orders/:id` | คำสั่งซื้อรายการเดียว |
-| GET | `/api/orders/number/:orderNumber` | ค้นด้วยเลขที่ออร์เดอร์ |
-| POST | `/api/orders` | สร้างคำสั่งซื้อ |
-| PATCH | `/api/orders/:id/payment-slip` | แนบสลิปโอนเงิน |
-| PATCH | `/api/orders/:id/payment-status` | อัปเดตสถานะการชำระเงิน |
-| PATCH | `/api/orders/:id/order-status` | อัปเดตสถานะคำสั่งซื้อ |
-| PATCH | `/api/orders/:id/shipping` | บันทึกบริษัทขนส่ง + เลขพัสดุ (เฉพาะแบบจัดส่ง) |
-| DELETE | `/api/orders/:id` | ลบคำสั่งซื้อ (คืนสต็อกให้เฉพาะออร์เดอร์ที่ยังไม่ส่งมอบ) |
+| GET | `/api/v1/orders` | รายการคำสั่งซื้อ |
+| GET | `/api/v1/orders/stats/summary` | สรุปยอดสำหรับ dashboard |
+| GET | `/api/v1/orders/:id` | คำสั่งซื้อรายการเดียว |
+| GET | `/api/v1/orders/number/:orderNumber` | ค้นด้วยเลขที่ออร์เดอร์ |
+| POST | `/api/v1/orders` | สร้างคำสั่งซื้อ |
+| PATCH | `/api/v1/orders/:id/payment-slip` | แนบสลิปโอนเงิน |
+| PATCH | `/api/v1/orders/:id/payment-status` | อัปเดตสถานะการชำระเงิน |
+| PATCH | `/api/v1/orders/:id/order-status` | อัปเดตสถานะคำสั่งซื้อ |
+| PATCH | `/api/v1/orders/:id/shipping` | บันทึกบริษัทขนส่ง + เลขพัสดุ (เฉพาะแบบจัดส่ง) |
+| DELETE | `/api/v1/orders/:id` | ลบคำสั่งซื้อ (คืนสต็อกให้เฉพาะออร์เดอร์ที่ยังไม่ส่งมอบ) |
 
-**Query parameters ของ GET `/api/orders`**: `page`, `limit`, `user_id`, `order_status`, `payment_status`, `delivery_method`, `search` (เลขที่ออร์เดอร์ / รหัสรับสินค้า / เลขพัสดุ)
+**Query parameters ของ GET `/api/v1/orders`**: `page`, `limit`, `user_id`, `order_status`, `payment_status`, `delivery_method`, `search` (เลขที่ออร์เดอร์ / รหัสรับสินค้า / เลขพัสดุ)
 
-### POST `/api/orders` — สร้างคำสั่งซื้อ
+### POST `/api/v1/orders` — สร้างคำสั่งซื้อ
 
 ```json
 {
@@ -308,20 +316,20 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 ### PATCH สถานะต่าง ๆ
 
 ```json
-// /api/orders/:id/payment-slip
+// /api/v1/orders/:id/payment-slip
 { "payment_slip": "https://example.com/slips/slip.jpg" }
 
-// /api/orders/:id/payment-status
+// /api/v1/orders/:id/payment-status
 { "payment_status": "paid" }
 
-// /api/orders/:id/order-status
+// /api/v1/orders/:id/order-status
 { "order_status": "ready_for_pickup" }
 ```
 
 - แนบสลิป → `payment_status` เปลี่ยนเป็น `waiting_verify` อัตโนมัติ
 - ตั้ง `payment_status: "paid"` → `order_status` เปลี่ยนเป็น `confirmed` อัตโนมัติ
 
-### DELETE `/api/orders/:id` — ลบคำสั่งซื้อ
+### DELETE `/api/v1/orders/:id` — ลบคำสั่งซื้อ
 
 การคืนสต็อกขึ้นอยู่กับว่าสินค้าออกจากร้านไปแล้วหรือยัง
 
@@ -343,7 +351,7 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 `order_items` และ `pickup_logs` ของออร์เดอร์นั้นถูกลบตามด้วย (`onDelete: Cascade`) — ย้อนกลับไม่ได้
 ไม่พบออร์เดอร์ → **404**
 
-### PATCH `/api/orders/:id/shipping` — ข้อมูลการจัดส่ง
+### PATCH `/api/v1/orders/:id/shipping` — ข้อมูลการจัดส่ง
 
 ใช้กับออร์เดอร์ที่ `delivery_method: "delivery"` เท่านั้น (ถ้าเป็น `pickup` จะได้ **422**)
 
@@ -371,9 +379,9 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 | ใส่เลขพัสดุแต่ไม่ระบุขนส่ง | 422 |
 | ไม่พบออร์เดอร์ | 404 |
 
-> `GET /api/orders?search=EB123456789TH` ค้นจากเลขพัสดุได้ด้วย (นอกจากเลขที่ออร์เดอร์และรหัสรับสินค้า)
+> `GET /api/v1/orders?search=EB123456789TH` ค้นจากเลขพัสดุได้ด้วย (นอกจากเลขที่ออร์เดอร์และรหัสรับสินค้า)
 
-### GET `/api/orders/stats/summary`
+### GET `/api/v1/orders/stats/summary`
 
 ```json
 {
@@ -393,17 +401,17 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/orders/:orderId/items` | รายการสินค้าในออร์เดอร์ |
-| POST | `/api/orders/:orderId/items` | เพิ่มสินค้าเข้าออร์เดอร์เดิม |
-| GET | `/api/order-items/:id` | รายการเดียว |
-| PUT | `/api/order-items/:id` | แก้จำนวน |
-| DELETE | `/api/order-items/:id` | ลบรายการ |
+| GET | `/api/v1/orders/:orderId/items` | รายการสินค้าในออร์เดอร์ |
+| POST | `/api/v1/orders/:orderId/items` | เพิ่มสินค้าเข้าออร์เดอร์เดิม |
+| GET | `/api/v1/order-items/:id` | รายการเดียว |
+| PUT | `/api/v1/order-items/:id` | แก้จำนวน |
+| DELETE | `/api/v1/order-items/:id` | ลบรายการ |
 
 ```json
-// POST /api/orders/3/items
+// POST /api/v1/orders/3/items
 { "variant_id": 5, "quantity": 2 }
 
-// PUT /api/order-items/7
+// PUT /api/v1/order-items/7
 { "quantity": 3 }
 ```
 
@@ -415,15 +423,15 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 
 | Method | Path | คำอธิบาย |
 |---|---|---|
-| GET | `/api/pickup-logs` | ประวัติการรับสินค้า |
-| GET | `/api/pickup-logs/:id` | บันทึกรายการเดียว |
-| POST | `/api/pickup-logs/verify` | ตรวจสอบรหัสรับสินค้า (ยังไม่บันทึก) |
-| POST | `/api/pickup-logs` | บันทึกการส่งมอบสินค้า |
-| DELETE | `/api/pickup-logs/:id` | ลบบันทึก |
+| GET | `/api/v1/pickup-logs` | ประวัติการรับสินค้า |
+| GET | `/api/v1/pickup-logs/:id` | บันทึกรายการเดียว |
+| POST | `/api/v1/pickup-logs/verify` | ตรวจสอบรหัสรับสินค้า (ยังไม่บันทึก) |
+| POST | `/api/v1/pickup-logs` | บันทึกการส่งมอบสินค้า |
+| DELETE | `/api/v1/pickup-logs/:id` | ลบบันทึก |
 
 **Query parameters ของ GET**: `page`, `limit`, `order_id`, `staff_id`
 
-### POST `/api/pickup-logs/verify` — ขั้นตอนตรวจก่อนส่งมอบ
+### POST `/api/v1/pickup-logs/verify` — ขั้นตอนตรวจก่อนส่งมอบ
 
 ```json
 { "pickup_code": "PICKUP-88421" }
@@ -444,7 +452,7 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 - `already_picked_up` — เคยมีบันทึกการรับไปแล้วหรือยัง
 - รหัสไม่มีจริง → **404**
 
-### POST `/api/pickup-logs` — บันทึกการส่งมอบ
+### POST `/api/v1/pickup-logs` — บันทึกการส่งมอบ
 
 ```json
 {
@@ -473,33 +481,33 @@ curl -X POST http://localhost:3000/api/uploads/image -F "file=@polo.jpg"
 
 ```bash
 # 1. ลูกค้าสั่งซื้อ
-curl -X POST http://localhost:3000/api/orders \
+curl -X POST http://localhost:3000/api/v1/orders \
   -H "Content-Type: application/json" \
   -d '{"user_id":1,"delivery_method":"pickup","items":[{"variant_id":3,"quantity":1}]}'
 # → ได้ order_id และ pickup_code กลับมา
 
 # 2. ลูกค้าแนบสลิป
-curl -X PATCH http://localhost:3000/api/orders/3/payment-slip \
+curl -X PATCH http://localhost:3000/api/v1/orders/3/payment-slip \
   -H "Content-Type: application/json" \
   -d '{"payment_slip":"https://example.com/slip.jpg"}'
 
 # 3. เจ้าหน้าที่ยืนยันว่าเงินเข้าแล้ว
-curl -X PATCH http://localhost:3000/api/orders/3/payment-status \
+curl -X PATCH http://localhost:3000/api/v1/orders/3/payment-status \
   -H "Content-Type: application/json" \
   -d '{"payment_status":"paid"}'
 
 # 4. เจ้าหน้าที่แจ้งว่าของพร้อมรับ
-curl -X PATCH http://localhost:3000/api/orders/3/order-status \
+curl -X PATCH http://localhost:3000/api/v1/orders/3/order-status \
   -H "Content-Type: application/json" \
   -d '{"order_status":"ready_for_pickup"}'
 
 # 5. ลูกค้ามาถึงร้าน เจ้าหน้าที่ตรวจรหัส
-curl -X POST http://localhost:3000/api/pickup-logs/verify \
+curl -X POST http://localhost:3000/api/v1/pickup-logs/verify \
   -H "Content-Type: application/json" \
   -d '{"pickup_code":"PICKUP-123456"}'
 
 # 6. ส่งมอบและบันทึก → order_status กลายเป็น completed
-curl -X POST http://localhost:3000/api/pickup-logs \
+curl -X POST http://localhost:3000/api/v1/pickup-logs \
   -H "Content-Type: application/json" \
   -d '{"pickup_code":"PICKUP-123456","staff_id":3,"notes":"ส่งมอบเรียบร้อย"}'
 ```

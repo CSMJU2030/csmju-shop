@@ -17,7 +17,7 @@ import {
   VerifyPickupCodeDto,
 } from './dto/pickup-log.dto.js';
 
-@Controller('pickup-logs')
+@Controller('v1/pickup-logs')
 export class PickupLogsController {
   constructor(private readonly pickupLogsService: PickupLogsService) {}
 

@@ -378,7 +378,7 @@ export default function StaffStockPage() {
                 {pending.map((o) => (
                   <tr key={o.order_id}>
                     <td className="px-5 py-3 font-mono text-xs">{o.order_number}</td>
-                    <td className="px-3 py-3">{o.user?.fullname ?? '—'}</td>
+                    <td className="px-3 py-3">{o.customer_name ?? '—'}</td>
                     <td className="px-3 py-3 font-semibold">{baht(o.total_amount)}</td>
                     <td className="px-3 py-3 text-slate-500">{thaiDateTime(o.created_at)}</td>
                     <td className="px-3 py-3">

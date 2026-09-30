@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
 import { baht, PAYMENT_STATUS_TH } from '@/lib/format';
 import { Button, Card, Pill } from '@/components/ui';
 import { CheckCircle, QrIcon, Search } from '@/components/icons';
 import QrScanner from '@/components/QrScanner';
+import { STAFF } from '@/lib/identities';
 
 /**
  * ดึงรหัสรับสินค้าออกจากข้อความใน QR
@@ -18,8 +19,7 @@ function extractPickupCode(text) {
 
 export default function StaffPickupPage() {
   const [code, setCode] = useState('');
-  const [staff, setStaff] = useState([]);
-  const [staffId, setStaffId] = useState('');
+  const [staffId, setStaffId] = useState(STAFF[0].core_user_id);
   const [result, setResult] = useState(null);
   const [notes, setNotes] = useState('');
   const [idChecked, setIdChecked] = useState(false);
@@ -28,16 +28,6 @@ export default function StaffPickupPage() {
   const [done, setDone] = useState(null);
   /** รหัสล่าสุดที่กล้องอ่านได้ — ไว้ยืนยันกับเจ้าหน้าที่ว่าสแกนติดแล้ว */
   const [scanned, setScanned] = useState(null);
-
-  useEffect(() => {
-    Promise.all([api.listUsers({ role: 'staff' }), api.listUsers({ role: 'admin' })])
-      .then(([a, b]) => {
-        const all = [...a.data, ...b.data];
-        setStaff(all);
-        setStaffId(String(all[0]?.user_id ?? ''));
-      })
-      .catch(() => setStaff([]));
-  }, []);
 
   /** ค้นหาออร์เดอร์จากรหัส — รับค่าจากช่องพิมพ์ หรือจากกล้องที่สแกนเจอ */
   const lookup = async (e, fromScan) => {
@@ -76,7 +66,8 @@ export default function StaffPickupPage() {
     try {
       const r = await api.createPickupLog({
         pickup_code: result.order.pickup_code,
-        staff_id: Number(staffId),
+        staff_core_user_id: staffId,
+        staff_name: STAFF.find((s) => s.core_user_id === staffId)?.name ?? '',
         notes: notes.trim() || undefined,
       });
       setDone(r.data);
@@ -149,14 +140,16 @@ export default function StaffPickupPage() {
               onChange={(e) => setStaffId(e.target.value)}
               className="mt-1.5 w-full rounded-xl border border-hairline px-3 py-2.5 text-sm outline-none focus:border-jade-500"
             >
-              {staff.length === 0 && <option value="">— ไม่พบเจ้าหน้าที่ในฐานข้อมูล —</option>}
-              {staff.map((u) => (
-                <option key={u.user_id} value={u.user_id}>
-                  {u.fullname} ({u.role})
+              {STAFF.map((s) => (
+                <option key={s.core_user_id} value={s.core_user_id}>
+                  {s.name} ({s.role})
                 </option>
               ))}
             </select>
           </label>
+          <p className="mt-2 text-xs text-slate-500">
+            ตัวตนทดสอบ — เมื่อเชื่อม Core Hub แล้วระบบจะใช้เจ้าหน้าที่ที่ล็อกอินอยู่แทน
+          </p>
         </Card>
 
         {/* ── ขวา: ผลการตรวจสอบ ── */}
@@ -201,12 +194,12 @@ export default function StaffPickupPage() {
 
               <div className="mt-4 flex items-center gap-3">
                 <span className="grid size-11 place-items-center rounded-full bg-navy-100 font-bold text-navy-700">
-                  {order.user?.fullname?.slice(0, 1) ?? '?'}
+                  {order.customer_name?.slice(0, 1) ?? '?'}
                 </span>
                 <div className="leading-tight">
-                  <p className="font-semibold">{order.user?.fullname}</p>
+                  <p className="font-semibold">{order.customer_name}</p>
                   <p className="text-sm text-slate-500">
-                    รหัสนักศึกษา {order.user?.student_id ?? '—'} · {order.user?.phone ?? '—'}
+                    รหัสนักศึกษา {order.customer_student_id ?? '—'} · {order.customer_phone ?? '—'}
                   </p>
                 </div>
               </div>

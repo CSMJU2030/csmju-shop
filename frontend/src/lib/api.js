@@ -4,9 +4,10 @@
  * ฟังก์ชันที่นี่คลี่ `data` ออกมาให้ และโยน Error พร้อมข้อความภาษาไทยจาก API เมื่อไม่สำเร็จ
  *
  * เส้นทาง /api/* ถูก Next.js ส่งต่อไป NestJS ผ่าน rewrites ใน next.config.mjs
+ * endpoint ธุรกิจอยู่ใต้ /api/v1 ส่วน /api/health อยู่นอกเวอร์ชัน (api-conventions ข้อ 1)
  */
 
-const BASE = '/api';
+const BASE = '/api/v1';
 
 export class ApiError extends Error {
   constructor(message, status, details) {
@@ -17,10 +18,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body } = {}) {
+async function request(path, { method = 'GET', body, base = BASE } = {}) {
   let res;
   try {
-    res = await fetch(BASE + path, {
+    res = await fetch(base + path, {
       method,
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
@@ -75,7 +76,7 @@ const patch = (p, body) => request(p, { method: 'PATCH', body });
 const del = (p) => request(p, { method: 'DELETE' });
 
 export const api = {
-  health: () => get('/health'),
+  health: () => request('/health', { base: '/api' }),
 
   // ── สินค้า ──
   listProducts: (params = {}) => get(`/products?${new URLSearchParams({ limit: '100', ...params })}`),
@@ -99,9 +100,6 @@ export const api = {
   /** อัปโหลดไฟล์รูป แล้วได้ URL กลับมาใส่ใน image_url ของสินค้า */
   uploadImage: (file) => upload('/uploads/image', file),
   deleteImage: (url) => del(`/uploads/image?url=${encodeURIComponent(url)}`),
-
-  // ── ผู้ใช้ ──
-  listUsers: (params = {}) => get(`/users?${new URLSearchParams({ limit: '100', ...params })}`),
 
   // ── คำสั่งซื้อ ──
   listOrders: (params = {}) => get(`/orders?${new URLSearchParams({ limit: '100', ...params })}`),

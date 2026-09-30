@@ -18,7 +18,7 @@ import { UpdateVariantDto } from './dto/update-variant.dto.js';
 import { UpdateStockDto } from './dto/update-stock.dto.js';
 import { QueryVariantDto } from './dto/query-variant.dto.js';
 
-@Controller('variants')
+@Controller('v1/variants')
 export class VariantsController {
   constructor(private readonly variantsService: VariantsService) {}
 

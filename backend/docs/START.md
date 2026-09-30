@@ -177,7 +177,7 @@ npm run dev
 | `ECONNREFUSED 127.0.0.1:3000` ใน Postman | ลืมเปิดเซิร์ฟเวอร์ → ขั้นที่ 5 |
 | `database: disconnected` ที่ /api/health | PostgreSQL ไม่ได้รัน → ขั้นที่ 1 |
 | ทุก request ขึ้น `Invalid URL` | ลืมเลือก Environment → ขั้นที่ 7 ข้อ 4 |
-| `GET /api/users/1` ได้ 404 | ยังไม่ได้ seed → ขั้นที่ 4 |
+| `GET /api/v1/users/1` ได้ 404 | ยังไม่ได้ seed → ขั้นที่ 4 |
 | `Error: P3005` | `npx prisma migrate reset --force` แล้วทำขั้น 3–4 ใหม่ |
 | `Cannot find module '@nestjs/core'` | ยังไม่ได้ติดตั้ง → ขั้นที่ 2 |
 | ทุก request ได้ 404 ทั้งที่เซิร์ฟเวอร์รันอยู่ | ลืมใส่ `/api` นำหน้า path |

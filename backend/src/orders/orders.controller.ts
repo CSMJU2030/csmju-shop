@@ -23,7 +23,7 @@ import {
 import { UpdateShippingDto } from './dto/update-shipping.dto.js';
 import { CreateOrderItemDto } from '../order-items/dto/order-item.dto.js';
 
-@Controller('orders')
+@Controller('v1/orders')
 export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,

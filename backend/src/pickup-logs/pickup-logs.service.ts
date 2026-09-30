@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -22,10 +21,10 @@ const LOG_INCLUDE = {
       pickup_code: true,
       order_status: true,
       payment_status: true,
-      user: { select: { user_id: true, fullname: true, student_id: true } },
+      customer_name: true,
+      customer_student_id: true,
     },
   },
-  staff: { select: { user_id: true, fullname: true, role: true } },
 } satisfies Prisma.PickupLogInclude;
 
 @Injectable()
@@ -38,7 +37,7 @@ export class PickupLogsService {
 
     const where: Prisma.PickupLogWhereInput = {
       ...(query.order_id ? { order_id: query.order_id } : {}),
-      ...(query.staff_id ? { staff_id: query.staff_id } : {}),
+      ...(query.staff_core_user_id ? { staff_core_user_id: query.staff_core_user_id } : {}),
     };
 
     const [rows, total] = await Promise.all([
@@ -74,7 +73,6 @@ export class PickupLogsService {
     const order = await this.prisma.order.findUnique({
       where: { pickup_code: dto.pickup_code },
       include: {
-        user: { select: { user_id: true, fullname: true, student_id: true, phone: true } },
         order_items: {
           include: { variant: { include: { product: { select: { name: true } } } } },
         },
@@ -95,7 +93,8 @@ export class PickupLogsService {
 
   /**
    * บันทึกการส่งมอบสินค้า
-   * - ผู้บันทึกต้องเป็น staff หรือ admin
+   * - ผู้บันทึกระบุด้วย staff_core_user_id (สิทธิ์ staff/admin จะตรวจจาก token ของ Core Hub
+   *   ตอนเชื่อม Core Hub — ระบบนี้ไม่มีตาราง users ให้ตรวจ role เอง)
    * - ออร์เดอร์ต้องชำระเงินแล้วและยังไม่ถูกยกเลิก
    * - บันทึกสำเร็จแล้วปิดออร์เดอร์เป็น completed
    */
@@ -107,12 +106,6 @@ export class PickupLogsService {
     }
 
     const log = await this.prisma.$transaction(async (tx) => {
-      const staff = await tx.user.findUnique({ where: { user_id: dto.staff_id } });
-      if (!staff) throw new NotFoundException('ไม่พบผู้ใช้ (staff_id)');
-      if (!['staff', 'admin'].includes(staff.role ?? '')) {
-        throw new ForbiddenException('ผู้บันทึกต้องมี role เป็น staff หรือ admin เท่านั้น');
-      }
-
       const order = dto.order_id
         ? await tx.order.findUnique({ where: { order_id: dto.order_id } })
         : await tx.order.findUnique({ where: { pickup_code: dto.pickup_code! } });
@@ -130,7 +123,8 @@ export class PickupLogsService {
       const created = await tx.pickupLog.create({
         data: {
           order_id: order.order_id,
-          staff_id: dto.staff_id,
+          staff_core_user_id: dto.staff_core_user_id,
+          staff_name: dto.staff_name.trim(),
           notes: dto.notes ?? null,
         },
         include: LOG_INCLUDE,

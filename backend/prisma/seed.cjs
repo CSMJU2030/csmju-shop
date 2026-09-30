@@ -12,52 +12,37 @@ async function main() {
   // (สำคัญมาก — ทำให้ id ที่ใช้ใน Postman environment คงที่ทุกครั้งที่ seed ใหม่)
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE "pickup_logs", "order_items", "orders",
-                   "product_variants", "products", "users"
+                   "product_variants", "products"
     RESTART IDENTITY CASCADE;
   `);
 
-  // -------------------- 1) users --------------------
-  const student = await prisma.user.create({
-    data: {
-      student_id: '6604101304',
-      fullname: 'สมชาย รักเรียน',
-      email: 'somchai.r@csmju.ac.th',
-      phone: '0812345678',
-      role: 'customer',
-    },
-  });
+  // -------------------- 1) ตัวตนผู้ใช้ --------------------
+  // ระบบนี้ไม่มีตาราง users — ผู้ใช้เป็นของ Core Hub และอ้างถึงด้วย core_user_id
+  // ค่าด้านล่างตรงกับผู้ใช้ตัวอย่างของ Core Hub (user-00x) และตรงกับตัวตนทดสอบในหน้าเว็บ
+  const student = {
+    core_user_id: 'user-002',
+    student_id: '6604101304',
+    fullname: 'สมชาย รักเรียน',
+    email: 'somchai.r@csmju.ac.th',
+    phone: '0812345678',
+  };
+  const student2 = {
+    core_user_id: 'user-004',
+    student_id: '6604101305',
+    fullname: 'มานี ใจดี',
+    email: 'manee.j@csmju.ac.th',
+    phone: '0823456789',
+  };
+  const staff = { core_user_id: 'user-003', fullname: 'วิชัย ดูแลร้าน' };
 
-  const student2 = await prisma.user.create({
-    data: {
-      student_id: '6604101305',
-      fullname: 'มานี ใจดี',
-      email: 'manee.j@csmju.ac.th',
-      phone: '0823456789',
-      role: 'customer',
-    },
+  /** snapshot ข้อมูลผู้สั่งที่เก็บไว้ในคำสั่งซื้อ */
+  const customerOf = (u) => ({
+    core_user_id: u.core_user_id,
+    customer_name: u.fullname,
+    customer_email: u.email,
+    customer_phone: u.phone,
+    customer_student_id: u.student_id,
   });
-
-  const staff = await prisma.user.create({
-    data: {
-      student_id: '6504101001',
-      fullname: 'วิชัย ดูแลร้าน',
-      email: 'wichai.staff@csmju.ac.th',
-      phone: '0898765432',
-      role: 'staff',
-    },
-  });
-
-  const admin = await prisma.user.create({
-    data: {
-      student_id: null,
-      fullname: 'ผู้ดูแลระบบ CSMJU',
-      email: 'admin@csmju.ac.th',
-      phone: '0800000000',
-      role: 'admin',
-    },
-  });
-
-  console.log(`✅ users: ${[student, student2, staff, admin].length} รายการ`);
 
   // -------------------- 2) products + variants --------------------
   const polo = await prisma.product.create({
@@ -136,7 +121,7 @@ async function main() {
   const order1 = await prisma.order.create({
     data: {
       order_number: 'ORD-202609-0001',
-      user_id: student.user_id,
+      ...customerOf(student),
       total_amount: 1040.0,
       delivery_method: 'pickup',
       shipping_fee: 0.0,
@@ -159,7 +144,7 @@ async function main() {
   const order2 = await prisma.order.create({
     data: {
       order_number: 'ORD-202609-0002',
-      user_id: student2.user_id,
+      ...customerOf(student2),
       total_amount: 568.0,
       delivery_method: 'delivery',
       shipping_fee: 50.0,
@@ -186,7 +171,8 @@ async function main() {
   const log = await prisma.pickupLog.create({
     data: {
       order_id: order1.order_id,
-      staff_id: staff.user_id,
+      staff_core_user_id: staff.core_user_id,
+      staff_name: staff.fullname,
       notes: 'ตรวจสอบรหัสรับ PICKUP-88421 ถูกต้อง ส่งมอบสินค้าเรียบร้อย',
     },
   });
@@ -194,8 +180,8 @@ async function main() {
   console.log(`✅ pickup_logs: 1 รายการ (pickup_id = ${log.pickup_id})`);
   console.log('🎉 ใส่ข้อมูลตัวอย่างเสร็จสมบูรณ์');
   console.log('\n📌 ค่าที่ใช้ทดสอบ Postman:');
-  console.log(`   user_id (customer) = ${student.user_id}`);
-  console.log(`   staff_id           = ${staff.user_id}`);
+  console.log(`   core_user_id (customer) = ${student.core_user_id}`);
+  console.log(`   staff_core_user_id      = ${staff.core_user_id}`);
   console.log(`   product_id (polo)  = ${polo.product_id}`);
   console.log(`   variant_id (Size L)= ${poloL.variant_id}`);
   console.log(`   order_id           = ${order1.order_id}`);

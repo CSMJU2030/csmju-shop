@@ -43,7 +43,7 @@ export class CreateProductDto {
   @Length(1, 50, { message: 'category ยาวไม่เกิน 50 ตัวอักษร' })
   category: string;
 
-  /** ที่อยู่รูปที่ได้จาก POST /api/uploads/image (หรือ URL รูปจากที่อื่นก็ได้) */
+  /** ที่อยู่รูปที่ได้จาก POST /api/v1/uploads/image (หรือ URL รูปจากที่อื่นก็ได้) */
   @IsOptional()
   @IsString()
   @Length(0, 255, { message: 'image_url ยาวไม่เกิน 255 ตัวอักษร' })

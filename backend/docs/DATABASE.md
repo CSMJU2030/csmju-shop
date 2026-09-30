@@ -1,5 +1,13 @@
 # DATABASE — CSMJU-Shop
 
+> **ปรับให้ตรงมาตรฐาน CSMJU2030 (1 ต.ค. 2569)**
+> - endpoint ธุรกิจย้ายไปอยู่ใต้ `/api/v1/...` ส่วน `/api/health` คงเดิม
+> - **เลิกใช้ตาราง `users` และ endpoint `/api/v1/users`** — ผู้ใช้เป็นของ Core Hub
+>   คำสั่งซื้ออ้างผู้สั่งด้วย `core_user_id` + snapshot `customer_name`, `customer_email`,
+>   `customer_phone`, `customer_student_id` · บันทึกรับสินค้าใช้ `staff_core_user_id` + `staff_name`
+> - เนื้อหาเกี่ยวกับ users ด้านล่างเป็นของเวอร์ชันก่อนหน้า เก็บไว้เป็นประวัติ
+
+
 ฐานข้อมูล: **PostgreSQL 16** · ชื่อ **`csmju_shop`** · ORM: **Prisma 6**
 ไฟล์นิยาม: `prisma/schema.prisma` · Migration: `20260922143333_init` (โครงหลัก) · `20260923150000_add_product_image_url` (คอลัมน์รูปสินค้า) · `20260924090000_add_order_shipping_tracking` (ข้อมูลจัดส่ง)
 เข้าถึงจากโค้ดผ่าน `PrismaService` (`src/prisma/prisma.service.ts`) ซึ่งลงทะเบียนเป็น `@Global()` module

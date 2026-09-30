@@ -1,8 +1,11 @@
 // ============================================================
 //  CSMJU-Shop : Prisma Schema
 //  Database : PostgreSQL  (csmju_shop)
-//  ออกแบบตาม ER Diagram : users, products, product_variants,
+//  ออกแบบตาม ER Diagram : products, product_variants,
 //                          orders, order_items, pickup_logs
+//
+//  ไม่มีตาราง users — ตัวตนผู้ใช้เป็นของ Core Hub (data-dictionary ข้อ 9.2)
+//  ระบบนี้อ้างผู้ใช้ด้วย core_user_id และเก็บชื่อ/ติดต่อไว้เป็น snapshot ในคำสั่งซื้อ
 // ============================================================
 
 generator client {
@@ -12,25 +15,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-// ------------------------------------------------------------
-// users : ผู้ใช้งาน (นักศึกษา / เจ้าหน้าที่ / แอดมิน)
-// ------------------------------------------------------------
-model User {
-  user_id    Int      @id @default(autoincrement())
-  student_id String?  @unique @db.VarChar(20)
-  fullname   String   @db.VarChar(100)
-  email      String   @unique @db.VarChar(100)
-  phone      String   @db.VarChar(15)
-  role       String?  @default("customer") @db.VarChar(20)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-
-  // Relations
-  orders      Order[]
-  pickup_logs PickupLog[] @relation("StaffPickups")
-
-  @@map("users")
 }
 
 // ------------------------------------------------------------
@@ -81,7 +65,13 @@ model ProductVariant {
 model Order {
   order_id         Int      @id @default(autoincrement())
   order_number     String   @unique @db.VarChar(20)
-  user_id          Int
+  /// ผู้สั่งซื้อ — claim `sub` จาก Core Hub
+  core_user_id     String   @db.VarChar(64)
+  /// snapshot ข้อมูลผู้สั่ง ณ เวลาสั่งซื้อ
+  customer_name       String  @db.VarChar(100)
+  customer_email      String  @db.VarChar(100)
+  customer_phone      String  @db.VarChar(15)
+  customer_student_id String? @db.VarChar(20)
   total_amount     Decimal  @db.Decimal(10, 2)
   delivery_method  String   @db.VarChar(20)
   shipping_fee     Decimal? @default(0.00) @db.Decimal(10, 2)
@@ -97,11 +87,10 @@ model Order {
   created_at       DateTime @default(now()) @db.Timestamptz(6)
 
   // Relations
-  user        User        @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
   order_items OrderItem[]
   pickup_logs PickupLog[]
 
-  @@index([user_id])
+  @@index([core_user_id])
   @@index([order_status])
   @@index([payment_status])
   @@index([tracking_number])
@@ -134,15 +123,16 @@ model OrderItem {
 model PickupLog {
   pickup_id   Int      @id @default(autoincrement())
   order_id    Int
-  staff_id    Int
+  /// เจ้าหน้าที่ผู้บันทึก — claim `sub` จาก Core Hub
+  staff_core_user_id String @db.VarChar(64)
+  staff_name         String @db.VarChar(100)
   pickup_time DateTime @default(now()) @db.Timestamptz(6)
   notes       String?  @db.Text
 
   // Relations
   order Order @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Cascade)
-  staff User  @relation("StaffPickups", fields: [staff_id], references: [user_id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([order_id])
-  @@index([staff_id])
+  @@index([staff_core_user_id])
   @@map("pickup_logs")
 }

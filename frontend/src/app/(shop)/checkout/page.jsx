@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { baht } from '@/lib/format';
 import { useCart } from '@/lib/cart';
+import { CUSTOMERS, customerFields } from '@/lib/identities';
 import { Button, Card, EmptyState, Pill, Spinner } from '@/components/ui';
 import ProductArt from '@/components/ProductArt';
 import { ArrowLeft, CheckCircle, Lock, MapPin, Trash, Truck, Upload } from '@/components/icons';
@@ -16,24 +17,13 @@ export default function CheckoutPage() {
   const { lines, setQuantity, remove, subtotal, clear, ready } = useCart();
   const router = useRouter();
 
-  const [customers, setCustomers] = useState([]);
-  const [userId, setUserId] = useState('');
+  const [customerId, setCustomerId] = useState(CUSTOMERS[0].core_user_id);
   const [method, setMethod] = useState('pickup');
   const [address, setAddress] = useState('');
   const [slipName, setSlipName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const fileRef = useRef(null);
-
-  useEffect(() => {
-    api
-      .listUsers({ role: 'customer' })
-      .then((r) => {
-        setCustomers(r.data);
-        setUserId(String(r.data[0]?.user_id ?? ''));
-      })
-      .catch(() => setCustomers([]));
-  }, []);
 
   const shipping = method === 'delivery' ? SHIPPING_FEE : 0;
   const total = subtotal + shipping;
@@ -47,13 +37,14 @@ export default function CheckoutPage() {
 
   const submit = async () => {
     setError(null);
-    if (!userId) return setError(new Error('เลือกผู้สั่งซื้อก่อน'));
+    const customer = CUSTOMERS.find((c) => c.core_user_id === customerId);
+    if (!customer) return setError(new Error('เลือกผู้สั่งซื้อก่อน'));
     if (method === 'delivery' && !address.trim()) return setError(new Error('การจัดส่งต้องระบุที่อยู่'));
 
     setSubmitting(true);
     try {
       const created = await api.createOrder({
-        user_id: Number(userId),
+        ...customerFields(customer),
         delivery_method: method,
         ...(method === 'delivery'
           ? { shipping_fee: SHIPPING_FEE, shipping_address: address.trim() }
@@ -236,20 +227,19 @@ export default function CheckoutPage() {
             <label className="block text-sm font-medium">
               ผู้สั่งซื้อ
               <select
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-hairline px-3 py-2.5 text-sm outline-none focus:border-navy-500"
               >
-                {customers.length === 0 && <option value="">— ยังไม่มีผู้ใช้ในฐานข้อมูล —</option>}
-                {customers.map((u) => (
-                  <option key={u.user_id} value={u.user_id}>
-                    {u.fullname} {u.student_id ? `(${u.student_id})` : ''}
+                {CUSTOMERS.map((c) => (
+                  <option key={c.core_user_id} value={c.core_user_id}>
+                    {c.name} {c.student_id ? `(${c.student_id})` : ''}
                   </option>
                 ))}
               </select>
             </label>
             <p className="mt-2 text-xs text-slate-500">
-              ระบบยังไม่มีการล็อกอิน จึงเลือกผู้สั่งซื้อจากตาราง users โดยตรง
+              ตัวตนทดสอบ — เมื่อเชื่อม Core Hub แล้วระบบจะใช้ผู้ที่ล็อกอินอยู่แทน
             </p>
           </Card>
         </div>
@@ -325,7 +315,7 @@ export default function CheckoutPage() {
                 tone="navy"
                 className="mt-4 w-full py-3"
                 onClick={submit}
-                disabled={submitting || !userId}
+                disabled={submitting || !customerId}
               >
                 <CheckCircle className="size-4.5" />
                 {submitting ? 'กำลังบันทึก…' : 'ยืนยันคำสั่งซื้อ'}

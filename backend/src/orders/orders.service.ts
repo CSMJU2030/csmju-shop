@@ -25,9 +25,6 @@ import { UpdateShippingDto } from './dto/update-shipping.dto.js';
 
 /** ข้อมูลที่แนบไปกับคำสั่งซื้อทุกครั้ง */
 export const ORDER_INCLUDE = {
-  user: {
-    select: { user_id: true, student_id: true, fullname: true, email: true, phone: true },
-  },
   order_items: {
     include: {
       variant: {
@@ -37,9 +34,7 @@ export const ORDER_INCLUDE = {
       },
     },
   },
-  pickup_logs: {
-    include: { staff: { select: { user_id: true, fullname: true, role: true } } },
-  },
+  pickup_logs: true,
 } satisfies Prisma.OrderInclude;
 
 @Injectable()
@@ -51,7 +46,7 @@ export class OrdersService {
     const limit = query.limit ?? 20;
 
     const where: Prisma.OrderWhereInput = {
-      ...(query.user_id ? { user_id: query.user_id } : {}),
+      ...(query.core_user_id ? { core_user_id: query.core_user_id } : {}),
       ...(query.order_status ? { order_status: query.order_status } : {}),
       ...(query.payment_status ? { payment_status: query.payment_status } : {}),
       ...(query.delivery_method ? { delivery_method: query.delivery_method } : {}),
@@ -61,6 +56,7 @@ export class OrdersService {
               { order_number: { contains: query.search, mode: 'insensitive' } },
               { pickup_code: { contains: query.search, mode: 'insensitive' } },
               { tracking_number: { contains: query.search, mode: 'insensitive' } },
+              { customer_name: { contains: query.search, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -106,7 +102,7 @@ export class OrdersService {
 
   /**
    * สร้างคำสั่งซื้อ — ทุกขั้นอยู่ใน transaction เดียว
-   * ตรวจผู้ใช้/สินค้า → ตรวจสต็อก → ตัดสต็อก → คำนวณยอด → ออกเลขที่และรหัสรับ
+   * ตรวจสินค้า → ตรวจสต็อก → ตัดสต็อก → คำนวณยอด → ออกเลขที่และรหัสรับ
    *
    * ลองใหม่ได้สูงสุด 3 ครั้งถ้าเจอ P2002 (เลขที่ออร์เดอร์หรือรหัสรับซ้ำ)
    * เกิดได้ตอนสองคนกดสั่งพร้อมกันเป๊ะ ๆ หรือรหัสรับที่สุ่มมาดันซ้ำของเดิม
@@ -131,9 +127,6 @@ export class OrdersService {
   /** ความพยายามสร้างออร์เดอร์หนึ่งครั้ง (ดู create() ด้านบน) */
   private async createOnce(dto: CreateOrderDto) {
     const order = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { user_id: dto.user_id } });
-      if (!user) throw new NotFoundException('ไม่พบผู้ใช้ (user_id)');
-
       const variantIds = [...new Set(dto.items.map((i) => i.variant_id))];
       const variants = await tx.productVariant.findMany({
         where: { variant_id: { in: variantIds } },
@@ -191,7 +184,11 @@ export class OrdersService {
       return tx.order.create({
         data: {
           order_number: generateOrderNumber(sequence, prefix),
-          user_id: dto.user_id,
+          core_user_id: dto.core_user_id,
+          customer_name: dto.customer_name.trim(),
+          customer_email: dto.customer_email.trim(),
+          customer_phone: dto.customer_phone.trim(),
+          customer_student_id: dto.customer_student_id?.trim() || null,
           total_amount: total,
           delivery_method: dto.delivery_method,
           shipping_fee: fee,

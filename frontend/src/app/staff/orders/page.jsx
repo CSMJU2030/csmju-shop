@@ -209,7 +209,7 @@ export default function StaffOrdersPage() {
                         </Link>
                         <p className="mt-0.5 text-xs text-slate-400">{thaiDateTime(o.created_at)}</p>
                       </td>
-                      <td className="px-3 py-3">{o.user?.fullname ?? '—'}</td>
+                      <td className="px-3 py-3">{o.customer_name ?? '—'}</td>
                       <td className="px-3 py-3 font-semibold">{baht(o.total_amount)}</td>
                       <td className="px-3 py-3 text-slate-500">
                         {isDelivery ? 'จัดส่ง' : 'รับที่สาขา'}

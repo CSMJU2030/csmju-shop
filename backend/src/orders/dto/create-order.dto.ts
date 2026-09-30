@@ -4,10 +4,12 @@ import {
   IsArray,
   IsIn,
   IsInt,
+  IsEmail,
   IsNumber,
   IsOptional,
   IsString,
   Length,
+  Matches,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -26,10 +28,29 @@ export class OrderItemInputDto {
 }
 
 export class CreateOrderDto {
-  @Type(() => Number)
-  @IsInt({ message: 'ต้องระบุ user_id เป็นจำนวนเต็ม' })
-  @Min(1, { message: 'user_id ไม่ถูกต้อง' })
-  user_id: number;
+  /**
+   * ผู้สั่งซื้อ — claim `sub` จาก Core Hub
+   * (ก่อนเชื่อม Core Hub หน้าเว็บส่งค่าจากตัวตนทดสอบมาให้)
+   */
+  @IsString({ message: 'ต้องระบุ core_user_id' })
+  @Length(1, 64, { message: 'core_user_id ยาว 1–64 ตัวอักษร' })
+  core_user_id: string;
+
+  @IsString({ message: 'ต้องระบุ customer_name' })
+  @Length(1, 100, { message: 'customer_name ยาว 1–100 ตัวอักษร' })
+  customer_name: string;
+
+  @IsEmail({}, { message: 'customer_email ไม่ใช่อีเมลที่ถูกต้อง' })
+  @Length(1, 100)
+  customer_email: string;
+
+  @Matches(/^[0-9+\-\s]{9,15}$/, { message: 'customer_phone ต้องเป็นเบอร์โทร 9–15 หลัก' })
+  customer_phone: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 20, { message: 'customer_student_id ยาวไม่เกิน 20 ตัวอักษร' })
+  customer_student_id?: string;
 
   @IsIn(DELIVERY_METHODS, {
     message: `delivery_method ต้องเป็นหนึ่งใน: ${DELIVERY_METHODS.join(', ')}`,
