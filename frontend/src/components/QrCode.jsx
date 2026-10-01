@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 
-/** อ่านสีจาก design token ของ CSMJU (ห้ามพิมพ์ hex ในโค้ด) */
+/** อ่านสีจาก token ของ template CSMJU (ห้ามพิมพ์ hex ในโค้ด) */
 function tokenColor(name, fallback) {
   if (typeof window === 'undefined') return fallback;
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
@@ -48,9 +48,9 @@ export default function QrCode({ value, size = 180 }) {
 
       const ctx = canvas.getContext('2d');
       ctx.scale(dpr, dpr);
-      ctx.fillStyle = tokenColor('--csmju-color-surface', 'white');
+      ctx.fillStyle = tokenColor('--color-surface-container-lowest', 'white');
       ctx.fillRect(0, 0, px, px);
-      ctx.fillStyle = tokenColor('--csmju-color-text', 'black');
+      ctx.fillStyle = tokenColor('--color-on-surface', 'black');
       for (let r = 0; r < modules; r++) {
         for (let c = 0; c < modules; c++) {
           if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
