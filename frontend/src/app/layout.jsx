@@ -1,11 +1,19 @@
-import { IBM_Plex_Sans_Thai } from 'next/font/google';
+import { Noto_Sans_Thai, Plus_Jakarta_Sans } from 'next/font/google';
 import { CartProvider } from '@/lib/cart';
-import './globals.css';
+import './shop.css';
 
-const plexThai = IBM_Plex_Sans_Thai({
+// ฟอนต์ตาม template csmju-subsystem-web (globals.css อ้าง --font-noto-thai / --font-jakarta)
+const notoSansThai = Noto_Sans_Thai({
   subsets: ['thai', 'latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-plex-thai',
+  variable: '--font-noto-thai',
+  display: 'swap',
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-jakarta',
   display: 'swap',
 });
 
@@ -27,7 +35,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="th" className={plexThai.variable}>
+    <html lang="th" className={`${notoSansThai.variable} ${jakarta.variable}`}>
       <body>
         <CartProvider>{children}</CartProvider>
       </body>
