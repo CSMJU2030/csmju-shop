@@ -12,7 +12,7 @@ import { QrIcon } from './icons';
  * ถอดได้เมื่อไหร่ก็ปิดกล้องแล้วเรียก onDetect ทันที
  *
  * ข้อจำกัดของเบราว์เซอร์: กล้องเปิดได้เฉพาะหน้าเว็บที่เป็น secure context
- * คือ https:// หรือ http://localhost เท่านั้น — เปิดผ่าน IP เครื่อง (เช่น http://192.168.x.x:4000)
+ * คือ https:// หรือ http://localhost เท่านั้น — เปิดผ่าน IP เครื่อง (เช่น http://192.168.x.x:5028)
  * เบราว์เซอร์จะไม่ยอมให้ใช้กล้องเลย จึงเช็กและบอกผู้ใช้ตรง ๆ
  */
 export default function QrScanner({ onDetect, disabled = false }) {
@@ -68,7 +68,7 @@ export default function QrScanner({ onDetect, disabled = false }) {
         setError(
           'หน้านี้เปิดกล้องไม่ได้เพราะไม่ใช่การเชื่อมต่อที่ปลอดภัย — ' +
             'เบราว์เซอร์ยอมให้ใช้กล้องเฉพาะ http://localhost หรือ https:// เท่านั้น ' +
-            'ถ้าเปิดผ่าน IP ของเครื่องอยู่ ให้กลับไปใช้ http://localhost:4000 แทน',
+            'ถ้าเปิดผ่าน IP ของเครื่องอยู่ ให้กลับไปใช้ http://localhost:5028 แทน',
         );
         setStatus('error');
         return;
