@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "description": "หน้าเว็บ CSMJU-Shop (Next.js) — ฝั่งนักศึกษาและฝั่งเจ้าหน้าที่ ต่อกับ NestJS API",
   "scripts": {
-    "dev": "next dev -p 5028",
+    "dev": "next dev -p 3228",
     "build": "next build",
-    "start": "next start -p 5028",
+    "start": "next start -p 3228",
     "lint": "eslint"
   },
   "dependencies": {

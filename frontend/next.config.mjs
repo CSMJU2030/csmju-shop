@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 /** @type {import('next').NextConfig} */
 // ที่อยู่ NestJS API — ถูกฝังตอน next build (deployment.md ข้อ 3.2)
 // dev: ตั้ง API_TARGET / BACKEND_URL ใน .env.local · image: frontend/Dockerfile ใช้ http://api:4000
-const API_TARGET = process.env.BACKEND_URL || process.env.API_TARGET || 'http://localhost:3000';
+const API_TARGET = process.env.BACKEND_URL || process.env.API_TARGET || 'http://localhost:5028';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig = {

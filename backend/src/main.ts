@@ -14,7 +14,7 @@ async function bootstrap() {
 
   app.enableCors();
 
-  // เสิร์ฟรูปที่อัปโหลดไว้ — เปิดดูได้ที่ http://localhost:3000/uploads/products/xxx.jpg
+  // เสิร์ฟรูปที่อัปโหลดไว้ — เปิดดูได้ที่ http://localhost:5028/uploads/products/xxx.jpg
   // อยู่นอก prefix /api เพราะเป็นไฟล์ ไม่ใช่ endpoint
   const uploadsDir = join(process.cwd(), 'uploads');
   mkdirSync(join(uploadsDir, 'products'), { recursive: true });
@@ -36,7 +36,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = Number(process.env.PORT) || 5028;
   await app.listen(port);
 
   logger.log(`CSMJU-Shop API ทำงานที่ http://localhost:${port}`);
