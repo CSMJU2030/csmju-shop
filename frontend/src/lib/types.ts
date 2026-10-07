@@ -11,6 +11,7 @@ export type ProductVariant = Schemas["ProductVariantModel"];
 export type VariantWithProduct = Schemas["VariantWithProductModel"];
 export type ProductCategory = Schemas["ProductCategoryModel"];
 export type ProductImage = Schemas["ProductImageModel"];
+export type PaymentSlip = Schemas["PaymentSlipModel"];
 export type Order = Schemas["OrderModel"];
 export type OrderItem = Schemas["OrderItemModel"];
 export type OrderStats = Schemas["OrderStatsModel"];

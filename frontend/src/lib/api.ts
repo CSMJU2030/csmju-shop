@@ -24,6 +24,7 @@ import type {
   Product,
   ProductCategory,
   ProductImage,
+  PaymentSlip,
   UpdateProductBody,
   UpdateShippingBody,
   UpdateVariantBody,
@@ -157,6 +158,11 @@ export const api = {
     const form = new FormData();
     form.append("file", file);
     return (await send<ProductImage>("/product-images", { method: "POST", body: form })).data;
+  },
+  uploadSlip: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return (await send<PaymentSlip>("/payment-slips", { method: "POST", body: form })).data;
   },
   deleteImage: (id: string) => write<Deleted>("DELETE", `/product-images/${id}`),
 

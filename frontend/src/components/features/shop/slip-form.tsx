@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { inputClass, primaryButtonClass } from "@/csmju";
+import { primaryButtonClass } from "@/csmju";
 import { errorMessage } from "@/components/shared/api-error-view";
 import { FormField, describedBy } from "@/components/shared/form-field";
 import { OpenInNewIcon } from "@/components/shared/shop-icons";
@@ -10,21 +10,22 @@ import { useToast } from "@/components/shared/toast";
 import { ApiError, api } from "@/lib/api";
 import type { Order } from "@/lib/types";
 import { focusRing, linkClass } from "./shop-ui";
+import { SlipUpload } from "./slip-upload";
 
 const FIELD_ID = "order-payment-slip";
-const HINT = "วางลิงก์รูปสลิปโอนเงิน หรือชื่อไฟล์สลิป ไม่เกิน 255 ตัวอักษร";
+const HINT = "รองรับไฟล์ภาพ JPG, PNG, WebP ขนาดไม่เกิน 5 MB";
 
 function validate(value: string): string | null {
   const v = value.trim();
-  if (!v) return "กรุณากรอกลิงก์หรือชื่อไฟล์สลิปโอนเงิน";
-  if (v.length > 255) return "ลิงก์หรือชื่อไฟล์สลิปยาวได้ไม่เกิน 255 ตัวอักษร";
+  if (!v) return "กรุณาอัปโหลดสลิปโอนเงิน";
+  if (v.length > 255) return "ข้อมูลสลิปไม่ถูกต้อง กรุณาอัปโหลดใหม่";
   return null;
 }
 
 /** สลิปปัจจุบัน — แสดงเป็นลิงก์เฉพาะเมื่อเป็น http(s) */
 export function CurrentSlip({ slip }: { slip: string | null }) {
   if (!slip) return <p className="text-body-md text-on-surface-variant">ยังไม่ได้แนบสลิป</p>;
-  if (/^https?:\/\//i.test(slip)) {
+  if (/^https?:\/\//i.test(slip) || /^\/api\//.test(slip)) {
     return (
       <a href={slip} target="_blank" rel="noopener noreferrer" className={`${linkClass} break-words`}>
         <OpenInNewIcon className="h-4 w-4 shrink-0" />
@@ -84,21 +85,16 @@ export function SlipForm({ order, onAttached }: { order: Order; onAttached: (ord
       {order.paymentStatus === "REJECTED" && (
         <Alert tone="warning">สลิปก่อนหน้าไม่ผ่านการตรวจสอบ กรุณาแนบสลิปใหม่</Alert>
       )}
-      <FormField id={FIELD_ID} label="ลิงก์หรือชื่อไฟล์สลิปโอนเงิน" required hint={HINT} error={fieldError}>
-        <input
+      <FormField id={FIELD_ID} label="อัปโหลดสลิปโอนเงิน" required hint={HINT} error={fieldError}>
+        <SlipUpload
           id={FIELD_ID}
-          type="text"
-          maxLength={255}
           value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            if (fieldError) setFieldError(validate(e.target.value));
+          onChange={(url) => {
+            setValue(url);
+            setFieldError(null);
           }}
-          onBlur={() => value && setFieldError(validate(value))}
-          aria-required="true"
-          aria-invalid={fieldError ? true : undefined}
-          aria-describedby={describedBy(FIELD_ID, HINT, fieldError)}
-          className={`${inputClass} ${fieldError ? "input-error" : ""}`}
+          invalid={!!fieldError}
+          describedBy={describedBy(FIELD_ID, HINT, fieldError)}
         />
       </FormField>
       {formError && <Alert title="แนบสลิปไม่สำเร็จ">{formError}</Alert>}

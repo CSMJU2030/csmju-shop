@@ -385,6 +385,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/payment-slips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * อัปโหลดสลิปโอนเงิน (multipart/form-data ฟิลด์ชื่อ file) → คืน url ไปใส่ paymentSlip ของคำสั่งซื้อ
+         *     สลิปเป็นเอกสารการเงิน จึงเก็บในดิสก์และเปิดดูผ่าน GET ที่ตรวจสิทธิ์ทุกครั้ง (ไม่มี static)
+         */
+        post: operations["PaymentSlipsController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -745,6 +765,13 @@ export interface components {
         ProductImageModel: {
             id: string;
             /** @description ใส่ค่านี้ใน imageUrl ของสินค้า */
+            url: string;
+            contentType: string;
+            size: number;
+        };
+        PaymentSlipModel: {
+            id: string;
+            /** @description ใส่ค่านี้ใน paymentSlip ของคำสั่งซื้อ (เปิดดูได้เมื่อเข้าสู่ระบบ) */
             url: string;
             contentType: string;
             size: number;
@@ -1716,6 +1743,36 @@ export interface operations {
                         /** @enum {boolean} */
                         success: true;
                         data: components["schemas"]["DeletedModel"];
+                    };
+                };
+            };
+        };
+    };
+    PaymentSlipsController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["PaymentSlipModel"];
                     };
                 };
             };

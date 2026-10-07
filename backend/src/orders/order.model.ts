@@ -97,3 +97,11 @@ export class OrderStatsModel {
   @ApiProperty({ type: () => [StatusCountModel] })
   byPaymentStatus!: StatusCountModel[];
 }
+
+export class PaymentSlipModel {
+  id!: string;
+  /** ใส่ค่านี้ใน paymentSlip ของคำสั่งซื้อ (เปิดดูได้เมื่อเข้าสู่ระบบ) */
+  url!: string;
+  contentType!: string;
+  size!: number;
+}

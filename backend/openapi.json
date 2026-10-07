@@ -1910,6 +1910,62 @@
           "product-images"
         ]
       }
+    },
+    "/api/v1/payment-slips": {
+      "post": {
+        "operationId": "PaymentSlipsController_upload",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentSlipModel"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "อัปโหลดสลิปโอนเงิน (multipart/form-data ฟิลด์ชื่อ file) → คืน url ไปใส่ paymentSlip ของคำสั่งซื้อ\nสลิปเป็นเอกสารการเงิน จึงเก็บในดิสก์และเปิดดูผ่าน GET ที่ตรวจสิทธิ์ทุกครั้ง (ไม่มี static)",
+        "tags": [
+          "payment-slips"
+        ]
+      }
     }
   },
   "info": {
@@ -3072,6 +3128,30 @@
           "url": {
             "type": "string",
             "description": "ใส่ค่านี้ใน imageUrl ของสินค้า"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "contentType",
+          "size"
+        ]
+      },
+      "PaymentSlipModel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "ใส่ค่านี้ใน paymentSlip ของคำสั่งซื้อ (เปิดดูได้เมื่อเข้าสู่ระบบ)"
           },
           "contentType": {
             "type": "string"

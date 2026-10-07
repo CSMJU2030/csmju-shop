@@ -1,5 +1,6 @@
 "use client";
 
+import { SlipUpload } from "./slip-upload";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -70,7 +71,8 @@ function validate(field: Field, v: Values): string | null {
       if (v.shippingAddress.trim().length > 500) return "ที่อยู่จัดส่งยาวได้ไม่เกิน 500 ตัวอักษร";
       return null;
     case "paymentSlip":
-      if (v.paymentSlip.trim().length > 255) return "ลิงก์หรือชื่อไฟล์สลิปยาวได้ไม่เกิน 255 ตัวอักษร";
+      if (!v.paymentSlip.trim()) return "กรุณาอัปโหลดสลิปโอนเงิน";
+      if (v.paymentSlip.trim().length > 255) return "ข้อมูลสลิปไม่ถูกต้อง กรุณาอัปโหลดใหม่";
       return null;
   }
 }
@@ -499,24 +501,22 @@ export function CheckoutView() {
 
               <FormField
                 id={FIELD_ID.paymentSlip}
-                label="ลิงก์หรือชื่อไฟล์สลิปโอนเงิน (ไม่บังคับ)"
-                hint="ยังไม่ได้โอน เว้นว่างไว้ได้ แล้วแนบสลิปภายหลังในหน้ารายละเอียดคำสั่งซื้อ"
+                label="อัปโหลดสลิปโอนเงิน"
+                required
+                hint="รองรับไฟล์ภาพ JPG, PNG, WebP ขนาดไม่เกิน 5 MB"
                 error={errors.paymentSlip}
               >
-                <input
+                <SlipUpload
                   id={FIELD_ID.paymentSlip}
-                  type="text"
-                  maxLength={255}
                   value={values.paymentSlip}
-                  onChange={(e) => setValue("paymentSlip", e.target.value)}
+                  onChange={(url) => setValue("paymentSlip", url)}
                   onBlur={() => onBlur("paymentSlip")}
-                  aria-invalid={errors.paymentSlip ? true : undefined}
-                  aria-describedby={describedBy(
+                  invalid={!!errors.paymentSlip}
+                  describedBy={describedBy(
                     FIELD_ID.paymentSlip,
-                    "ยังไม่ได้โอน เว้นว่างไว้ได้ แล้วแนบสลิปภายหลังในหน้ารายละเอียดคำสั่งซื้อ",
+                    "รองรับไฟล์ภาพ JPG, PNG, WebP ขนาดไม่เกิน 5 MB",
                     errors.paymentSlip,
                   )}
-                  className={`${inputClass} ${errors.paymentSlip ? "input-error" : ""}`}
                 />
               </FormField>
             </div>

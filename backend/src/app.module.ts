@@ -8,6 +8,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PickupLogsModule } from './pickup-logs/pickup-logs.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductImagesModule } from './product-images/product-images.controller';
+import { PaymentSlipsModule } from './payment-slips/payment-slips.controller';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
 import { ProductsModule } from './products/products.module';
 
@@ -23,6 +24,7 @@ import { ProductsModule } from './products/products.module';
     PickupLogsModule,
     OrderStatsModule,
     ProductImagesModule,
+    PaymentSlipsModule,
   ],
   controllers: [HealthController],
 })
