@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` },
+      // callback ของ Core Hub (/auth/callback) อยู่ที่ backend — โดเมนเดียวกับหน้าเว็บ เช่น https://csmju-shop.jowave.com/auth/callback
+      { source: "/auth/:path*", destination: `${BACKEND_URL}/auth/:path*` },
       { source: "/uploads/:path*", destination: `${BACKEND_URL}/uploads/:path*` },
     ];
   },
