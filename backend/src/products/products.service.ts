@@ -1,27 +1,33 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { buildMeta } from '../common/utils/helpers.js';
-import { CreateProductDto } from './dto/create-product.dto.js';
-import { UpdateProductDto } from './dto/update-product.dto.js';
-import { QueryProductDto } from './dto/query-product.dto.js';
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
+import { ApiError } from '../common/api-error';
+import { deleted, Paginated } from '../common/envelope';
+import { skipOf } from '../common/pagination-query.dto';
+import { PrismaService } from '../prisma/prisma.service';
+import { toDateOnly } from '../shop/shop.constants';
+import { CreateProductDto } from './dto/create-product.dto';
+import { QueryProductDto } from './dto/query-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+
+const PRODUCT_INCLUDE = {
+  variants: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] },
+} satisfies Prisma.ProductInclude;
+
+type ProductRow = Prisma.ProductGetPayload<{ include: typeof PRODUCT_INCLUDE }>;
+
+/** แปลงแถวจากฐานข้อมูลเป็น JSON ตามสัญญา (estimatedDelivery เป็น YYYY-MM-DD) */
+export function presentProduct(product: ProductRow) {
+  return { ...product, estimatedDelivery: toDateOnly(product.estimatedDelivery) };
+}
 
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: QueryProductDto) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-
     const where: Prisma.ProductWhereInput = {
       ...(query.category ? { category: query.category } : {}),
-      ...(query.is_preorder !== undefined ? { is_preorder: query.is_preorder } : {}),
+      ...(query.isPreorder !== undefined ? { isPreorder: query.isPreorder } : {}),
       ...(query.search
         ? {
             OR: [
@@ -35,44 +41,32 @@ export class ProductsService {
     const [rows, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        skip: query.skip,
-        take: limit,
-        orderBy: { product_id: 'asc' },
-        include: { variants: { orderBy: { variant_id: 'asc' } } },
+        skip: skipOf(query),
+        take: query.limit,
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        include: PRODUCT_INCLUDE,
       }),
       this.prisma.product.count({ where }),
     ]);
 
-    return { message: 'ดึงรายการสินค้าสำเร็จ', data: rows, meta: buildMeta(page, limit, total) };
+    return Paginated.of(rows.map(presentProduct), total, query.page, query.limit);
   }
 
-  async findCategories() {
-    const rows = await this.prisma.product.groupBy({
-      by: ['category'],
-      _count: { category: true },
-      orderBy: { category: 'asc' },
-    });
-
-    return {
-      message: 'ดึงหมวดหมู่สินค้าสำเร็จ',
-      data: rows.map((r) => ({ category: r.category, product_count: r._count.category })),
-    };
-  }
-
-  async findOne(product_id: number) {
+  async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
-      where: { product_id },
-      include: { variants: { orderBy: { variant_id: 'asc' } } },
+      where: { id },
+      include: PRODUCT_INCLUDE,
     });
-    if (!product) throw new NotFoundException('ไม่พบสินค้า');
-
-    return { message: 'ดึงข้อมูลสินค้าสำเร็จ', data: product };
+    if (!product) throw new ApiError('NOT_FOUND', 'ไม่พบสินค้า');
+    return presentProduct(product);
   }
 
   async create(dto: CreateProductDto) {
-    const isPreorder = dto.is_preorder ?? false;
-    if (isPreorder && !dto.preorder_end_date) {
-      throw new UnprocessableEntityException('สินค้าพรีออเดอร์ต้องระบุ preorder_end_date');
+    const isPreorder = dto.isPreorder ?? false;
+    if (isPreorder && !dto.preorderEndDate) {
+      throw new ApiError('VALIDATION_ERROR', 'สินค้าพรีออเดอร์ต้องระบุ preorderEndDate', [
+        'preorderEndDate is required when isPreorder is true',
+      ]);
     }
 
     const product = await this.prisma.product.create({
@@ -80,60 +74,86 @@ export class ProductsService {
         name: dto.name,
         description: dto.description ?? null,
         category: dto.category,
-        image_url: dto.image_url || null,
-        is_preorder: isPreorder,
-        preorder_end_date: dto.preorder_end_date ? new Date(dto.preorder_end_date) : null,
-        estimated_delivery: dto.estimated_delivery ? new Date(dto.estimated_delivery) : null,
+        imageUrl: dto.imageUrl || null,
+        isPreorder,
+        preorderEndDate: dto.preorderEndDate ? new Date(dto.preorderEndDate) : null,
+        estimatedDelivery: dto.estimatedDelivery ? new Date(dto.estimatedDelivery) : null,
         ...(dto.variants?.length
           ? {
               variants: {
                 create: dto.variants.map((v) => ({
-                  variant_name: v.variant_name,
+                  variantName: v.variantName,
                   price: v.price,
-                  stock_quantity: v.stock_quantity ?? 0,
+                  stockQuantity: v.stockQuantity ?? 0,
                 })),
               },
             }
           : {}),
       },
-      include: { variants: true },
+      include: PRODUCT_INCLUDE,
     });
-
-    return { message: 'สร้างสินค้าสำเร็จ', data: product };
+    return presentProduct(product);
   }
 
-  async update(product_id: number, dto: UpdateProductDto) {
+  async update(id: string, dto: UpdateProductDto) {
+    const current = await this.prisma.product.findUnique({ where: { id } });
+    if (!current) throw new ApiError('NOT_FOUND', 'ไม่พบสินค้า');
+
+    const isPreorder = dto.isPreorder ?? current.isPreorder;
+    const preorderEnd =
+      dto.preorderEndDate !== undefined ? dto.preorderEndDate : current.preorderEndDate;
+    if (isPreorder && !preorderEnd) {
+      throw new ApiError('VALIDATION_ERROR', 'สินค้าพรีออเดอร์ต้องระบุ preorderEndDate', [
+        'preorderEndDate is required when isPreorder is true',
+      ]);
+    }
+
     const product = await this.prisma.product.update({
-      where: { product_id },
+      where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.description !== undefined ? { description: dto.description || null } : {}),
         ...(dto.category !== undefined ? { category: dto.category } : {}),
-        // ส่ง image_url เป็นค่าว่าง = เอารูปออก
-        ...(dto.image_url !== undefined ? { image_url: dto.image_url || null } : {}),
-        ...(dto.is_preorder !== undefined ? { is_preorder: dto.is_preorder } : {}),
-        ...(dto.preorder_end_date !== undefined
-          ? { preorder_end_date: dto.preorder_end_date ? new Date(dto.preorder_end_date) : null }
+        ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl || null } : {}),
+        ...(dto.isPreorder !== undefined ? { isPreorder: dto.isPreorder } : {}),
+        ...(dto.preorderEndDate !== undefined
+          ? { preorderEndDate: dto.preorderEndDate ? new Date(dto.preorderEndDate) : null }
           : {}),
-        ...(dto.estimated_delivery !== undefined
-          ? { estimated_delivery: dto.estimated_delivery ? new Date(dto.estimated_delivery) : null }
+        ...(dto.estimatedDelivery !== undefined
+          ? { estimatedDelivery: dto.estimatedDelivery ? new Date(dto.estimatedDelivery) : null }
           : {}),
       },
-      include: { variants: true },
+      include: PRODUCT_INCLUDE,
     });
-
-    return { message: 'แก้ไขสินค้าสำเร็จ', data: product };
+    return presentProduct(product);
   }
 
-  async remove(product_id: number) {
-    const usedInOrders = await this.prisma.orderItem.count({ where: { variant: { product_id } } });
+  async remove(id: string) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) throw new ApiError('NOT_FOUND', 'ไม่พบสินค้า');
+
+    const usedInOrders = await this.prisma.orderItem.count({
+      where: { variant: { productId: id } },
+    });
     if (usedInOrders > 0) {
-      throw new ConflictException(
+      throw new ApiError(
+        'CONFLICT',
         `ลบไม่ได้ สินค้านี้ถูกใช้ในคำสั่งซื้อแล้ว ${usedInOrders} รายการ`,
       );
     }
 
-    await this.prisma.product.delete({ where: { product_id } });
-    return { message: 'ลบสินค้าสำเร็จ', data: { product_id } };
+    await this.prisma.product.delete({ where: { id } });
+    return deleted(id);
+  }
+
+  /** หมวดหมู่ทั้งหมด พร้อมจำนวนสินค้า */
+  async categories(page: number, limit: number) {
+    const rows = await this.prisma.product.groupBy({
+      by: ['category'],
+      _count: { _all: true },
+      orderBy: { category: 'asc' },
+    });
+    const items = rows.map((r) => ({ category: r.category, productCount: r._count._all }));
+    return Paginated.of(items.slice((page - 1) * limit, page * limit), items.length, page, limit);
   }
 }

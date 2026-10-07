@@ -1,23 +1,34 @@
 {
   "name": "frontend",
-  "private": true,
   "version": "1.0.0",
-  "description": "หน้าเว็บ CSMJU-Shop (Next.js) — ฝั่งนักศึกษาและฝั่งเจ้าหน้าที่ ต่อกับ NestJS API",
+  "private": true,
+  "description": "หน้าเว็บ CSMJU Shop (Next.js App Router) — ฝั่งลูกค้าและฝั่งเจ้าหน้าที่ ต่อกับ backend NestJS",
   "scripts": {
-    "dev": "next dev -p 4000",
+    "dev": "next dev -p 3228",
     "build": "next build",
-    "start": "next start -p 4000",
-    "lint": "eslint"
+    "start": "next start -p 3228",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "generate:api-types": "openapi-typescript ../backend/openapi.json -o src/lib/api-types.ts"
   },
   "dependencies": {
-    "next": "^16.3.6",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "next": "16.3.4",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.6",
-    "tailwindcss": "^4.3.3"
+    "@eslint/js": "^9.36.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.18.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.36.0",
+    "openapi-typescript": "^7.9.1",
+    "tailwindcss": "^4",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.44.1",
+    "vitest": "^3.2.4"
   }
 }

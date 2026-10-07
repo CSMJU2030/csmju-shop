@@ -1,62 +1,77 @@
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
+import { OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
+import type { CoreHubIdentity } from '../auth/core-hub-identity';
+import { assertOwnerOrAny, canAny } from '../auth/ownership';
+import { Permission } from '../auth/permissions';
+import { ApiError } from '../common/api-error';
+import { deleted, Paginated } from '../common/envelope';
+import { skipOf } from '../common/pagination-query.dto';
+import { PrismaService } from '../prisma/prisma.service';
 import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service.js';
-import {
-  buildMeta,
-  generateOrderNumber,
+  formatOrderNumber,
   generatePickupCode,
   orderNumberPrefix,
   orderNumberSequence,
-} from '../common/utils/helpers.js';
-import { DEFAULT_SHIPPING_FEE } from '../common/constants.js';
-import { CreateOrderDto } from './dto/create-order.dto.js';
-import { QueryOrderDto } from './dto/query-order.dto.js';
+  shippingFeeSatang,
+} from '../shop/shop.constants';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { QueryOrderDto } from './dto/query-order.dto';
 import {
   UpdateOrderStatusDto,
+  UpdatePaymentSlipDto,
   UpdatePaymentStatusDto,
-  UploadSlipDto,
-} from './dto/update-order-status.dto.js';
-import { UpdateShippingDto } from './dto/update-shipping.dto.js';
+  UpdateShippingDto,
+} from './dto/update-order.dto';
 
 /** ข้อมูลที่แนบไปกับคำสั่งซื้อทุกครั้ง */
 export const ORDER_INCLUDE = {
-  order_items: {
+  orderItems: {
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     include: {
       variant: {
-        include: {
-          product: { select: { product_id: true, name: true, category: true, is_preorder: true } },
+        select: {
+          id: true,
+          variantName: true,
+          product: {
+            select: { id: true, name: true, category: true, isPreorder: true, imageUrl: true },
+          },
         },
       },
     },
   },
-  pickup_logs: true,
+  pickupLogs: { orderBy: [{ pickupTime: 'desc' }, { id: 'asc' }] },
 } satisfies Prisma.OrderInclude;
+
+/** สถานะที่ถือว่าจบแล้ว — เปลี่ยนต่อไม่ได้ */
+const FINAL_STATUSES: OrderStatus[] = [OrderStatus.COMPLETED, OrderStatus.CANCELLED];
+
+function isUniqueViolation(error: unknown): boolean {
+  return !!error && typeof error === 'object' && (error as { code?: unknown }).code === 'P2002';
+}
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: QueryOrderDto) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+  async findAll(user: CoreHubIdentity, query: QueryOrderDto) {
+    // มีแค่ :own → เห็นเฉพาะของตัวเองเสมอ ไม่ว่าจะส่ง query อะไรมา
+    const onlyMine = query.mine === true || !canAny(user, Permission.ORDER_READ_ANY);
 
     const where: Prisma.OrderWhereInput = {
-      ...(query.core_user_id ? { core_user_id: query.core_user_id } : {}),
-      ...(query.order_status ? { order_status: query.order_status } : {}),
-      ...(query.payment_status ? { payment_status: query.payment_status } : {}),
-      ...(query.delivery_method ? { delivery_method: query.delivery_method } : {}),
+      ...(onlyMine ? { coreUserId: user.coreUserId } : {}),
+      ...(query.orderStatus ? { orderStatus: query.orderStatus } : {}),
+      ...(query.paymentStatus ? { paymentStatus: query.paymentStatus } : {}),
+      ...(query.deliveryMethod ? { deliveryMethod: query.deliveryMethod } : {}),
+      ...(query.orderNumber ? { orderNumber: query.orderNumber } : {}),
       ...(query.search
         ? {
             OR: [
-              { order_number: { contains: query.search, mode: 'insensitive' } },
-              { pickup_code: { contains: query.search, mode: 'insensitive' } },
-              { tracking_number: { contains: query.search, mode: 'insensitive' } },
-              { customer_name: { contains: query.search, mode: 'insensitive' } },
+              { orderNumber: { contains: query.search, mode: 'insensitive' } },
+              { pickupCode: { contains: query.search, mode: 'insensitive' } },
+              { trackingNumber: { contains: query.search, mode: 'insensitive' } },
+              { recipientName: { contains: query.search, mode: 'insensitive' } },
+              { customerEmail: { contains: query.search, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -65,302 +80,292 @@ export class OrdersService {
     const [rows, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        skip: query.skip,
-        take: limit,
-        orderBy: { order_id: 'desc' },
+        skip: skipOf(query),
+        take: query.limit,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
         include: ORDER_INCLUDE,
       }),
       this.prisma.order.count({ where }),
     ]);
-
-    return {
-      message: 'ดึงรายการคำสั่งซื้อสำเร็จ',
-      data: rows,
-      meta: buildMeta(page, limit, total),
-    };
+    return Paginated.of(rows, total, query.page, query.limit);
   }
 
-  async findOne(order_id: number) {
-    const order = await this.prisma.order.findUnique({
-      where: { order_id },
-      include: ORDER_INCLUDE,
-    });
-    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
-
-    return { message: 'ดึงข้อมูลคำสั่งซื้อสำเร็จ', data: order };
-  }
-
-  async findByNumber(order_number: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { order_number },
-      include: ORDER_INCLUDE,
-    });
-    if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อจากเลขที่นี้');
-
-    return { message: 'ดึงข้อมูลคำสั่งซื้อสำเร็จ', data: order };
+  async findOne(user: CoreHubIdentity, id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id }, include: ORDER_INCLUDE });
+    if (!order) throw new ApiError('NOT_FOUND', 'ไม่พบคำสั่งซื้อ');
+    assertOwnerOrAny(user, order.coreUserId, Permission.ORDER_READ_ANY);
+    return order;
   }
 
   /**
    * สร้างคำสั่งซื้อ — ทุกขั้นอยู่ใน transaction เดียว
-   * ตรวจสินค้า → ตรวจสต็อก → ตัดสต็อก → คำนวณยอด → ออกเลขที่และรหัสรับ
+   * ตรวจสินค้า → ตัดสต็อกแบบมีเงื่อนไข (กันขายเกิน) → คำนวณยอด → ออกเลขที่และรหัสรับ
    *
-   * ลองใหม่ได้สูงสุด 3 ครั้งถ้าเจอ P2002 (เลขที่ออร์เดอร์หรือรหัสรับซ้ำ)
-   * เกิดได้ตอนสองคนกดสั่งพร้อมกันเป๊ะ ๆ หรือรหัสรับที่สุ่มมาดันซ้ำของเดิม
-   * ลองใหม่แล้วจะได้เลขถัดไปเอง ดีกว่าโยน error ใส่หน้าลูกค้า
+   * ลองใหม่สูงสุด 3 ครั้งเมื่อเลขที่คำสั่งซื้อ/รหัสรับชน (สองคนกดสั่งพร้อมกัน)
    */
-  async create(dto: CreateOrderDto) {
-    if (dto.delivery_method === 'delivery' && !dto.shipping_address) {
-      throw new UnprocessableEntityException('การจัดส่งแบบ delivery ต้องระบุ shipping_address');
+  async create(user: CoreHubIdentity, dto: CreateOrderDto) {
+    const shippingAddress = dto.shippingAddress?.trim() || null;
+    if (dto.deliveryMethod === 'DELIVERY' && !shippingAddress) {
+      throw new ApiError('VALIDATION_ERROR', 'การจัดส่งต้องระบุที่อยู่ (shippingAddress)', [
+        'shippingAddress is required when deliveryMethod is DELIVERY',
+      ]);
+    }
+
+    // รวมรายการที่เป็นตัวเลือกเดียวกัน
+    const quantities = new Map<string, number>();
+    for (const item of dto.items) {
+      quantities.set(item.variantId, (quantities.get(item.variantId) ?? 0) + item.quantity);
     }
 
     for (let attempt = 1; ; attempt++) {
       try {
-        return await this.createOnce(dto);
-      } catch (e) {
-        const duplicate =
-          e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002' && attempt < 3;
-        if (!duplicate) throw e;
+        return await this.createOnce(user, dto, shippingAddress, quantities);
+      } catch (error) {
+        if (!(isUniqueViolation(error) && attempt < 3)) throw error;
       }
     }
   }
 
-  /** ความพยายามสร้างออร์เดอร์หนึ่งครั้ง (ดู create() ด้านบน) */
-  private async createOnce(dto: CreateOrderDto) {
-    const order = await this.prisma.$transaction(async (tx) => {
-      const variantIds = [...new Set(dto.items.map((i) => i.variant_id))];
+  private async createOnce(
+    user: CoreHubIdentity,
+    dto: CreateOrderDto,
+    shippingAddress: string | null,
+    quantities: Map<string, number>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const variantIds = [...quantities.keys()];
       const variants = await tx.productVariant.findMany({
-        where: { variant_id: { in: variantIds } },
+        where: { id: { in: variantIds } },
         include: { product: true },
       });
       if (variants.length !== variantIds.length) {
-        throw new NotFoundException('มี variant_id ที่ไม่มีอยู่จริง');
+        throw new ApiError('NOT_FOUND', 'มีตัวเลือกสินค้าที่ไม่มีอยู่จริงในตะกร้า');
       }
 
-      const variantMap = new Map(variants.map((v) => [v.variant_id, v]));
+      const now = new Date();
       let subtotal = 0;
-      const itemData: Prisma.OrderItemCreateManyOrderInput[] = [];
+      const itemData: Prisma.OrderItemCreateWithoutOrderInput[] = [];
 
-      for (const item of dto.items) {
-        const variant = variantMap.get(item.variant_id)!;
-        const isPreorder = variant.product.is_preorder === true;
+      for (const variant of variants) {
+        const quantity = quantities.get(variant.id) ?? 0;
+        const isPreorder = variant.product.isPreorder;
+        const label = `"${variant.product.name} - ${variant.variantName}"`;
 
-        // สินค้าพรีออเดอร์สั่งได้แม้สต็อกเป็น 0
-        if (!isPreorder && (variant.stock_quantity ?? 0) < item.quantity) {
-          throw new ConflictException(
-            `สต็อกไม่พอสำหรับ "${variant.product.name} - ${variant.variant_name}" ` +
-              `(คงเหลือ ${variant.stock_quantity ?? 0}, ต้องการ ${item.quantity})`,
-          );
+        if (
+          isPreorder &&
+          variant.product.preorderEndDate &&
+          variant.product.preorderEndDate < now
+        ) {
+          throw new ApiError('CONFLICT', `ปิดรับพรีออเดอร์ ${label} แล้ว`);
         }
 
-        const unitPrice = Number(variant.price);
-        subtotal += unitPrice * item.quantity;
+        if (isPreorder) {
+          // สินค้าพรีออเดอร์สั่งได้แม้สต็อกเป็น 0 (สต็อกติดลบ = ยอดที่ต้องสั่งผลิตเพิ่ม)
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: { stockQuantity: { decrement: quantity } },
+          });
+        } else {
+          // ตัดสต็อกแบบมีเงื่อนไขในคำสั่งเดียว กันสองคำสั่งซื้อแย่งของชิ้นสุดท้าย
+          const result = await tx.productVariant.updateMany({
+            where: { id: variant.id, stockQuantity: { gte: quantity } },
+            data: { stockQuantity: { decrement: quantity } },
+          });
+          if (result.count === 0) {
+            throw new ApiError(
+              'CONFLICT',
+              `สต็อกไม่พอสำหรับ ${label} (คงเหลือ ${variant.stockQuantity}, ต้องการ ${quantity})`,
+            );
+          }
+        }
 
+        subtotal += variant.price * quantity;
         itemData.push({
-          variant_id: variant.variant_id,
-          quantity: item.quantity,
-          unit_price: unitPrice,
-          is_preorder_item: isPreorder,
-        });
-
-        await tx.productVariant.update({
-          where: { variant_id: variant.variant_id },
-          data: { stock_quantity: { decrement: item.quantity } },
+          variant: { connect: { id: variant.id } },
+          quantity,
+          unitPrice: variant.price,
+          isPreorderItem: isPreorder,
         });
       }
 
-      const fee =
-        dto.delivery_method === 'delivery' ? (dto.shipping_fee ?? DEFAULT_SHIPPING_FEE) : 0;
-      const total = Number((subtotal + fee).toFixed(2));
-      // เดินเลขต่อจาก "เลขที่สูงสุดของเดือนนี้" ไม่ใช่จากจำนวนออร์เดอร์ที่มีอยู่
-      // เพราะพอมีการลบออร์เดอร์ จำนวนจะลดลงแล้วเลขที่จะวนกลับไปชนของเดิม (P2002)
-      const prefix = orderNumberPrefix();
+      const shippingFee = dto.deliveryMethod === 'DELIVERY' ? shippingFeeSatang() : 0;
+
+      // เดินเลขต่อจาก "เลขที่สูงสุดของเดือนนี้" ไม่ใช่จากจำนวนแถว (ลบคำสั่งซื้อแล้วเลขจะไม่วนชนของเดิม)
+      const prefix = orderNumberPrefix(now);
       const latest = await tx.order.findFirst({
-        where: { order_number: { startsWith: prefix } },
-        orderBy: { order_number: 'desc' },
-        select: { order_number: true },
+        where: { orderNumber: { startsWith: prefix } },
+        orderBy: { orderNumber: 'desc' },
+        select: { orderNumber: true },
       });
-      const sequence = (latest ? orderNumberSequence(latest.order_number, prefix) : 0) + 1;
+      const sequence = (latest ? orderNumberSequence(latest.orderNumber, prefix) : 0) + 1;
 
       return tx.order.create({
         data: {
-          order_number: generateOrderNumber(sequence, prefix),
-          core_user_id: dto.core_user_id,
-          customer_name: dto.customer_name.trim(),
-          customer_email: dto.customer_email.trim(),
-          customer_phone: dto.customer_phone.trim(),
-          customer_student_id: dto.customer_student_id?.trim() || null,
-          total_amount: total,
-          delivery_method: dto.delivery_method,
-          shipping_fee: fee,
-          shipping_address: dto.shipping_address ?? null,
-          payment_slip: dto.payment_slip ?? null,
-          payment_status: dto.payment_slip ? 'waiting_verify' : 'pending',
-          order_status: 'pending',
-          pickup_code: dto.delivery_method === 'pickup' ? generatePickupCode() : null,
-          order_items: { create: itemData },
+          orderNumber: formatOrderNumber(sequence, prefix),
+          coreUserId: user.coreUserId,
+          customerEmail: user.email,
+          recipientName: dto.recipientName.trim(),
+          recipientPhone: dto.recipientPhone,
+          totalAmount: subtotal + shippingFee,
+          deliveryMethod: dto.deliveryMethod,
+          shippingFee,
+          shippingAddress: dto.deliveryMethod === 'DELIVERY' ? shippingAddress : null,
+          paymentSlip: dto.paymentSlip ?? null,
+          paymentStatus: dto.paymentSlip ? PaymentStatus.WAITING_VERIFY : PaymentStatus.PENDING,
+          orderStatus: OrderStatus.PENDING,
+          pickupCode: dto.deliveryMethod === 'PICKUP' ? generatePickupCode() : null,
+          orderItems: { create: itemData },
         },
         include: ORDER_INCLUDE,
       });
     });
-
-    return { message: 'สร้างคำสั่งซื้อสำเร็จ', data: order };
   }
 
-  async updatePaymentStatus(order_id: number, dto: UpdatePaymentStatusDto) {
-    const order = await this.prisma.order.update({
-      where: { order_id },
+  async updatePaymentStatus(id: string, dto: UpdatePaymentStatusDto) {
+    const current = await this.getOrThrow(id);
+    if (current.orderStatus === OrderStatus.CANCELLED && dto.paymentStatus === PaymentStatus.PAID) {
+      throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้ถูกยกเลิกแล้ว ยืนยันการชำระเงินไม่ได้');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
       data: {
-        payment_status: dto.payment_status,
+        paymentStatus: dto.paymentStatus,
         // จ่ายเงินแล้วถือว่ายืนยันคำสั่งซื้อ
-        ...(dto.payment_status === 'paid' ? { order_status: 'confirmed' } : {}),
+        ...(dto.paymentStatus === PaymentStatus.PAID && current.orderStatus === OrderStatus.PENDING
+          ? { orderStatus: OrderStatus.CONFIRMED }
+          : {}),
       },
       include: ORDER_INCLUDE,
     });
-
-    return { message: 'อัปเดตสถานะการชำระเงินสำเร็จ', data: order };
-  }
-
-  async updateOrderStatus(order_id: number, dto: UpdateOrderStatusDto) {
-    const order = await this.prisma.order.update({
-      where: { order_id },
-      data: { order_status: dto.order_status },
-      include: ORDER_INCLUDE,
-    });
-
-    return { message: 'อัปเดตสถานะคำสั่งซื้อสำเร็จ', data: order };
   }
 
   /**
-   * บันทึกบริษัทขนส่งและเลขพัสดุ (เฉพาะออร์เดอร์แบบจัดส่ง)
-   *
-   * ใส่เลขพัสดุครั้งแรก = ของออกจากร้านแล้ว จึงบันทึก shipped_at และเลื่อนสถานะเป็น shipped ให้เลย
-   * (ส่ง mark_shipped: false ถ้ายังไม่อยากให้เปลี่ยนสถานะ)
-   * ส่งค่าว่างมาทั้งคู่ = ล้างข้อมูลจัดส่งทิ้ง กรณีกรอกผิด
+   * เปลี่ยนสถานะคำสั่งซื้อ
+   * - ยกเลิก (CANCELLED) = คืนสต็อกทุกรายการ
+   * - คำสั่งซื้อที่จบแล้ว (COMPLETED / CANCELLED) เปลี่ยนต่อไม่ได้
    */
-  async updateShipping(order_id: number, dto: UpdateShippingDto) {
-    const current = await this.prisma.order.findUnique({ where: { order_id } });
-    if (!current) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+  async updateOrderStatus(id: string, dto: UpdateOrderStatusDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.order.findUnique({ where: { id }, include: { orderItems: true } });
+      if (!current) throw new ApiError('NOT_FOUND', 'ไม่พบคำสั่งซื้อ');
 
-    if (current.delivery_method !== 'delivery') {
-      throw new UnprocessableEntityException(
-        'คำสั่งซื้อนี้เป็นแบบรับที่สาขา ไม่ต้องใส่เลขพัสดุ — ใช้รหัสรับสินค้าที่จุดรับแทน',
-      );
-    }
+      if (current.orderStatus === dto.orderStatus) {
+        return tx.order.findUniqueOrThrow({ where: { id }, include: ORDER_INCLUDE });
+      }
+      if (FINAL_STATUSES.includes(current.orderStatus)) {
+        throw new ApiError(
+          'CONFLICT',
+          `คำสั่งซื้อนี้${current.orderStatus === OrderStatus.CANCELLED ? 'ถูกยกเลิก' : 'ส่งมอบ'}แล้ว เปลี่ยนสถานะไม่ได้`,
+        );
+      }
 
-    const carrier = dto.shipping_carrier?.trim() ?? current.shipping_carrier ?? '';
-    const tracking = dto.tracking_number?.trim() ?? current.tracking_number ?? '';
-
-    // มีเลขพัสดุต้องมีชื่อขนส่งด้วย ไม่งั้นลูกค้าไม่รู้จะไปเช็คที่เว็บไหน
-    if (tracking && !carrier) {
-      throw new UnprocessableEntityException('ต้องเลือกบริษัทขนส่งด้วย ไม่งั้นลูกค้าเช็คพัสดุไม่ได้');
-    }
-
-    const clearing = !carrier && !tracking;
-    const firstTime = Boolean(tracking) && !current.tracking_number;
-    const markShipped = dto.mark_shipped ?? true;
-
-    // เลื่อนเป็น shipped เฉพาะออร์เดอร์ที่ยังไม่จบและไม่ได้ถูกยกเลิก
-    const movable = !['completed', 'cancelled', 'shipped'].includes(current.order_status ?? '');
-    const nextStatus = firstTime && markShipped && movable ? 'shipped' : undefined;
-
-    const order = await this.prisma.order.update({
-      where: { order_id },
-      data: {
-        shipping_carrier: clearing ? null : carrier || null,
-        tracking_number: clearing ? null : tracking || null,
-        shipped_at: clearing ? null : firstTime ? new Date() : current.shipped_at,
-        ...(nextStatus ? { order_status: nextStatus } : {}),
-      },
-      include: ORDER_INCLUDE,
-    });
-
-    return {
-      message: clearing
-        ? 'ล้างข้อมูลการจัดส่งแล้ว'
-        : nextStatus
-          ? 'บันทึกเลขพัสดุและเปลี่ยนสถานะเป็น จัดส่งแล้ว'
-          : 'บันทึกข้อมูลการจัดส่งสำเร็จ',
-      data: order,
-    };
-  }
-
-  async uploadSlip(order_id: number, dto: UploadSlipDto) {
-    const order = await this.prisma.order.update({
-      where: { order_id },
-      data: { payment_slip: dto.payment_slip, payment_status: 'waiting_verify' },
-      include: ORDER_INCLUDE,
-    });
-
-    return { message: 'แนบสลิปการชำระเงินสำเร็จ', data: order };
-  }
-
-  /**
-   * ลบคำสั่งซื้อ
-   *
-   * กฎสำคัญเรื่องสต็อก:
-   * - ถ้าคำสั่งซื้อยัง "ไม่ได้ส่งมอบ" (order_status != completed) ของยังอยู่ในร้าน
-   *   การลบคือการยกเลิก จึงต้องคืนสต็อกให้ทุกรายการ
-   * - ถ้าคำสั่งซื้อ "รับสินค้าไปแล้ว" (completed) ของออกจากร้านไปแล้วจริง
-   *   ห้ามคืนสต็อก ไม่งั้นจำนวนคงเหลือจะเพิ่มขึ้นเองทั้งที่สินค้าไม่ได้กลับมา
-   *   การลบกรณีนี้คือการล้างประวัติ (pickup_logs และ order_items ถูกลบตาม onDelete: Cascade)
-   */
-  async remove(order_id: number) {
-    let restocked = false;
-
-    await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: { order_id },
-        include: { order_items: true },
-      });
-      if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
-
-      restocked = order.order_status !== 'completed';
-
-      if (restocked) {
-        for (const item of order.order_items) {
+      if (dto.orderStatus === OrderStatus.CANCELLED) {
+        for (const item of current.orderItems) {
           await tx.productVariant.update({
-            where: { variant_id: item.variant_id },
-            data: { stock_quantity: { increment: item.quantity } },
+            where: { id: item.variantId },
+            data: { stockQuantity: { increment: item.quantity } },
           });
         }
       }
 
-      await tx.order.delete({ where: { order_id } });
+      return tx.order.update({
+        where: { id },
+        data: { orderStatus: dto.orderStatus },
+        include: ORDER_INCLUDE,
+      });
     });
-
-    return {
-      message: restocked
-        ? 'ลบคำสั่งซื้อและคืนสต็อกสำเร็จ'
-        : 'ลบคำสั่งซื้อที่ส่งมอบแล้วสำเร็จ (ไม่คืนสต็อกเพราะสินค้าออกจากร้านไปแล้ว)',
-      data: { order_id, stock_restored: restocked },
-    };
   }
 
-  async summary() {
-    const [totalOrders, paidAgg, byOrderStatus, byPaymentStatus] = await Promise.all([
-      this.prisma.order.count(),
-      this.prisma.order.aggregate({
-        _sum: { total_amount: true },
-        where: { payment_status: 'paid' },
-      }),
-      this.prisma.order.groupBy({ by: ['order_status'], _count: { order_status: true } }),
-      this.prisma.order.groupBy({ by: ['payment_status'], _count: { payment_status: true } }),
-    ]);
+  /**
+   * บันทึกบริษัทขนส่งและเลขพัสดุ (เฉพาะคำสั่งซื้อแบบ DELIVERY)
+   * ใส่เลขพัสดุครั้งแรก = ของออกจากร้านแล้ว → บันทึก shippedAt และเลื่อนเป็น SHIPPED
+   * ส่งค่าว่างทั้งคู่ = ล้างข้อมูลการจัดส่ง
+   */
+  async updateShipping(id: string, dto: UpdateShippingDto) {
+    const current = await this.getOrThrow(id);
+    if (current.deliveryMethod !== 'DELIVERY') {
+      throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้เป็นแบบรับที่สาขา ไม่ต้องใส่เลขพัสดุ');
+    }
 
-    return {
-      message: 'ดึงสรุปยอดคำสั่งซื้อสำเร็จ',
+    const carrier = dto.shippingCarrier?.trim() ?? current.shippingCarrier ?? '';
+    const tracking = dto.trackingNumber?.trim() ?? current.trackingNumber ?? '';
+    if (tracking && !carrier) {
+      throw new ApiError(
+        'VALIDATION_ERROR',
+        'ต้องเลือกบริษัทขนส่งด้วย ไม่งั้นลูกค้าเช็คพัสดุไม่ได้',
+        ['shippingCarrier is required when trackingNumber is set'],
+      );
+    }
+
+    const clearing = !carrier && !tracking;
+    const firstTime = Boolean(tracking) && !current.trackingNumber;
+    const movable = !([...FINAL_STATUSES, OrderStatus.SHIPPED] as OrderStatus[]).includes(
+      current.orderStatus,
+    );
+    const markShipped = firstTime && (dto.markShipped ?? true) && movable;
+
+    return this.prisma.order.update({
+      where: { id },
       data: {
-        total_orders: totalOrders,
-        total_revenue_paid: Number(paidAgg._sum.total_amount ?? 0),
-        by_order_status: byOrderStatus.map((r) => ({
-          status: r.order_status,
-          count: r._count.order_status,
-        })),
-        by_payment_status: byPaymentStatus.map((r) => ({
-          status: r.payment_status,
-          count: r._count.payment_status,
-        })),
+        shippingCarrier: clearing ? null : carrier || null,
+        trackingNumber: clearing ? null : tracking || null,
+        shippedAt: clearing ? null : firstTime ? new Date() : current.shippedAt,
+        ...(markShipped ? { orderStatus: OrderStatus.SHIPPED } : {}),
       },
-    };
+      include: ORDER_INCLUDE,
+    });
+  }
+
+  /** แนบสลิป — เจ้าของคำสั่งซื้อ หรือเจ้าหน้าที่ */
+  async updatePaymentSlip(user: CoreHubIdentity, id: string, dto: UpdatePaymentSlipDto) {
+    const current = await this.getOrThrow(id);
+    assertOwnerOrAny(user, current.coreUserId, Permission.ORDER_UPDATE_ANY);
+
+    if (current.orderStatus === OrderStatus.CANCELLED) {
+      throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้ถูกยกเลิกแล้ว');
+    }
+    if (
+      current.paymentStatus === PaymentStatus.PAID ||
+      current.paymentStatus === PaymentStatus.REFUNDED
+    ) {
+      throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้ตรวจสอบการชำระเงินเรียบร้อยแล้ว');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: { paymentSlip: dto.paymentSlip, paymentStatus: PaymentStatus.WAITING_VERIFY },
+      include: ORDER_INCLUDE,
+    });
+  }
+
+  /**
+   * ลบคำสั่งซื้อ (ผู้ดูแล)
+   * - ยังไม่ส่งมอบและยังไม่ถูกยกเลิก → ของยังอยู่ในร้าน จึงคืนสต็อก
+   * - ส่งมอบแล้ว (COMPLETED) → ของออกจากร้านไปแล้ว ไม่คืนสต็อก
+   * - ยกเลิกแล้ว (CANCELLED) → คืนสต็อกไปตอนยกเลิกแล้ว ไม่คืนซ้ำ
+   */
+  async remove(id: string) {
+    await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id }, include: { orderItems: true } });
+      if (!order) throw new ApiError('NOT_FOUND', 'ไม่พบคำสั่งซื้อ');
+
+      if (!FINAL_STATUSES.includes(order.orderStatus)) {
+        for (const item of order.orderItems) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stockQuantity: { increment: item.quantity } },
+          });
+        }
+      }
+      await tx.order.delete({ where: { id } });
+    });
+    return deleted(id);
+  }
+
+  private async getOrThrow(id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new ApiError('NOT_FOUND', 'ไม่พบคำสั่งซื้อ');
+    return order;
   }
 }

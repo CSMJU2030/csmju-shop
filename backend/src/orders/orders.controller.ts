@@ -1,98 +1,112 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
-import { OrdersService } from './orders.service.js';
-import { OrderItemsService } from '../order-items/order-items.service.js';
-import { CreateOrderDto } from './dto/create-order.dto.js';
-import { QueryOrderDto } from './dto/query-order.dto.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import type { CoreHubIdentity } from '../auth/core-hub-identity';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { Permission } from '../auth/permissions';
+import { UuidParam } from '../common/uuid.pipe';
+import { CreateOrderItemDto } from '../order-items/dto/order-item.dto';
+import { OrderItemsService } from '../order-items/order-items.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { QueryOrderDto } from './dto/query-order.dto';
 import {
   UpdateOrderStatusDto,
+  UpdatePaymentSlipDto,
   UpdatePaymentStatusDto,
-  UploadSlipDto,
-} from './dto/update-order-status.dto.js';
-import { UpdateShippingDto } from './dto/update-shipping.dto.js';
-import { CreateOrderItemDto } from '../order-items/dto/order-item.dto.js';
+  UpdateShippingDto,
+} from './dto/update-order.dto';
+import { OrdersService } from './orders.service';
+import { ApiEnvelope, DeletedModel } from '../common/api-envelope.decorator';
+import { OrderItemModel, OrderModel } from './order.model';
 
+@ApiTags('orders')
 @Controller('v1/orders')
 export class OrdersController {
   constructor(
-    private readonly ordersService: OrdersService,
-    private readonly orderItemsService: OrderItemsService,
+    private readonly orders: OrdersService,
+    private readonly items: OrderItemsService,
   ) {}
 
-  /** เส้นทางแบบตายตัวต้องมาก่อน :id ไม่งั้นจะถูกจับเป็น id */
-  @Get('stats/summary')
-  summary() {
-    return this.ordersService.summary();
-  }
-
-  @Get('number/:orderNumber')
-  findByNumber(@Param('orderNumber') orderNumber: string) {
-    return this.ordersService.findByNumber(orderNumber);
-  }
-
+  /** รายการคำสั่งซื้อ — ลูกค้าเห็นเฉพาะของตัวเอง เจ้าหน้าที่เห็นทั้งหมด */
   @Get()
-  findAll(@Query() query: QueryOrderDto) {
-    return this.ordersService.findAll(query);
+  @RequirePermissions(Permission.ORDER_READ_ANY, Permission.ORDER_READ_OWN)
+  @ApiEnvelope(OrderModel, { paginated: true })
+  findAll(@CurrentUser() user: CoreHubIdentity, @Query() query: QueryOrderDto) {
+    return this.orders.findAll(user, query);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.findOne(id);
+  @RequirePermissions(Permission.ORDER_READ_ANY, Permission.ORDER_READ_OWN)
+  @ApiEnvelope(OrderModel)
+  findOne(@CurrentUser() user: CoreHubIdentity, @Param('id', UuidParam) id: string) {
+    return this.orders.findOne(user, id);
   }
 
+  /** สั่งซื้อ — เจ้าของคือผู้ที่ login อยู่ */
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateOrderDto) {
-    return this.ordersService.create(dto);
+  @RequirePermissions(Permission.ORDER_CREATE_OWN)
+  @ApiEnvelope(OrderModel, { created: true })
+  create(@CurrentUser() user: CoreHubIdentity, @Body() dto: CreateOrderDto) {
+    return this.orders.create(user, dto);
   }
 
+  /** ตรวจสลิป / เปลี่ยนสถานะการชำระเงิน (เจ้าหน้าที่) */
   @Patch(':id/payment-status')
-  updatePaymentStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePaymentStatusDto) {
-    return this.ordersService.updatePaymentStatus(id, dto);
+  @RequirePermissions(Permission.ORDER_UPDATE_ANY)
+  @ApiEnvelope(OrderModel)
+  updatePaymentStatus(@Param('id', UuidParam) id: string, @Body() dto: UpdatePaymentStatusDto) {
+    return this.orders.updatePaymentStatus(id, dto);
   }
 
+  /** เปลี่ยนสถานะคำสั่งซื้อ (เจ้าหน้าที่) — ยกเลิกแล้วคืนสต็อก */
   @Patch(':id/order-status')
-  updateOrderStatus(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOrderStatusDto) {
-    return this.ordersService.updateOrderStatus(id, dto);
+  @RequirePermissions(Permission.ORDER_UPDATE_ANY)
+  @ApiEnvelope(OrderModel)
+  updateOrderStatus(@Param('id', UuidParam) id: string, @Body() dto: UpdateOrderStatusDto) {
+    return this.orders.updateOrderStatus(id, dto);
   }
 
-  /** บันทึกบริษัทขนส่ง + เลขพัสดุ (เฉพาะออร์เดอร์แบบจัดส่ง) */
+  /** บริษัทขนส่ง + เลขพัสดุ (เฉพาะแบบจัดส่ง) */
   @Patch(':id/shipping')
-  updateShipping(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateShippingDto) {
-    return this.ordersService.updateShipping(id, dto);
+  @RequirePermissions(Permission.ORDER_UPDATE_ANY)
+  @ApiEnvelope(OrderModel)
+  updateShipping(@Param('id', UuidParam) id: string, @Body() dto: UpdateShippingDto) {
+    return this.orders.updateShipping(id, dto);
   }
 
+  /** แนบสลิปการชำระเงิน — เจ้าของคำสั่งซื้อ */
   @Patch(':id/payment-slip')
-  uploadSlip(@Param('id', ParseIntPipe) id: number, @Body() dto: UploadSlipDto) {
-    return this.ordersService.uploadSlip(id, dto);
+  @RequirePermissions(Permission.ORDER_UPDATE_ANY, Permission.ORDER_UPDATE_OWN)
+  @ApiEnvelope(OrderModel)
+  updatePaymentSlip(
+    @CurrentUser() user: CoreHubIdentity,
+    @Param('id', UuidParam) id: string,
+    @Body() dto: UpdatePaymentSlipDto,
+  ) {
+    return this.orders.updatePaymentSlip(user, id, dto);
   }
 
+  /** ลบคำสั่งซื้อ (ผู้ดูแล) */
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.remove(id);
+  @RequirePermissions(Permission.ORDER_DELETE_ANY)
+  @ApiEnvelope(DeletedModel)
+  remove(@Param('id', UuidParam) id: string) {
+    return this.orders.remove(id);
   }
 
-  // ── รายการสินค้าในคำสั่งซื้อ (nested) ──
-
-  @Get(':orderId/items')
-  findItems(@Param('orderId', ParseIntPipe) orderId: number) {
-    return this.orderItemsService.findByOrder(orderId);
+  /** รายการสินค้าในคำสั่งซื้อ */
+  @Get(':id/items')
+  @RequirePermissions(Permission.ORDER_READ_ANY, Permission.ORDER_READ_OWN)
+  @ApiEnvelope(OrderItemModel, { paginated: true })
+  findItems(@CurrentUser() user: CoreHubIdentity, @Param('id', UuidParam) id: string) {
+    return this.items.findByOrder(user, id);
   }
 
-  @Post(':orderId/items')
-  @HttpCode(HttpStatus.CREATED)
-  addItem(@Param('orderId', ParseIntPipe) orderId: number, @Body() dto: CreateOrderItemDto) {
-    return this.orderItemsService.create(orderId, dto);
+  /** เพิ่มสินค้าเข้าคำสั่งซื้อ (เจ้าหน้าที่) */
+  @Post(':id/items')
+  @RequirePermissions(Permission.ORDER_UPDATE_ANY)
+  @ApiEnvelope(OrderItemModel, { created: true })
+  addItem(@Param('id', UuidParam) id: string, @Body() dto: CreateOrderItemDto) {
+    return this.items.create(id, dto);
   }
 }

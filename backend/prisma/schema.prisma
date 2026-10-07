@@ -1,138 +1,159 @@
 // ============================================================
-//  CSMJU-Shop : Prisma Schema
-//  Database : PostgreSQL  (csmju_shop)
-//  ออกแบบตาม ER Diagram : products, product_variants,
-//                          orders, order_items, pickup_logs
+//  CSMJU Shop — Prisma schema (Prisma 7 + PrismaPg adapter)
+//  Database : PostgreSQL · shop_db (1 subsystem = 1 database)
 //
-//  ไม่มีตาราง users — ตัวตนผู้ใช้เป็นของ Core Hub (data-dictionary ข้อ 9.2)
-//  ระบบนี้อ้างผู้ใช้ด้วย core_user_id และเก็บชื่อ/ติดต่อไว้เป็น snapshot ในคำสั่งซื้อ
+//  Naming (standards/docs/data-dictionary.md ข้อ 9)
+//    table / column : snake_case ผ่าน @@map / @map
+//    Prisma field   : camelCase
+//    id             : UUID v4
+//    money          : integer หน่วยสตางค์ (ห้าม float/decimal)
+//    identity       : core_user_id (= claim `sub` จาก Core Hub) — ไม่มีตาราง users ของตัวเอง
 // ============================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-// ------------------------------------------------------------
-// products : สินค้า (1 สินค้า มีหลาย variant)
-// ------------------------------------------------------------
-model Product {
-  product_id         Int       @id @default(autoincrement())
-  name               String    @db.VarChar(150)
-  description        String?   @db.Text
-  category           String    @db.VarChar(50)
-  /// ที่อยู่รูปสินค้า เช่น /uploads/products/xxxx.jpg (ว่างได้ หน้าเว็บจะวาดภาพสำรองให้)
-  image_url          String?   @db.VarChar(255)
-  is_preorder        Boolean?  @default(false)
-  preorder_end_date  DateTime? @db.Timestamptz(6)
-  estimated_delivery DateTime? @db.Date
-  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
 
-  // Relations
+enum PaymentStatus {
+  PENDING
+  WAITING_VERIFY
+  PAID
+  REJECTED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+/// สินค้า — 1 สินค้ามีหลายตัวเลือก (ไซส์ / สี)
+model Product {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String    @db.VarChar(150)
+  description       String?   @db.Text
+  category          String    @db.VarChar(50)
+  /// ที่อยู่รูปสินค้า เช่น /uploads/products/<uuid>.jpg (ว่างได้ หน้าเว็บวาดภาพสำรองให้)
+  imageUrl          String?   @map("image_url") @db.VarChar(255)
+  isPreorder        Boolean   @default(false) @map("is_preorder")
+  preorderEndDate   DateTime? @map("preorder_end_date") @db.Timestamptz(6)
+  estimatedDelivery DateTime? @map("estimated_delivery") @db.Date
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
   variants ProductVariant[]
 
   @@index([category])
-  @@index([is_preorder])
+  @@index([isPreorder])
   @@map("products")
 }
 
-// ------------------------------------------------------------
-// product_variants : ตัวเลือกสินค้า (ไซส์ / สี) + ราคา + สต็อก
-// ------------------------------------------------------------
+/// ตัวเลือกสินค้า + ราคา + สต็อก
 model ProductVariant {
-  variant_id     Int     @id @default(autoincrement())
-  product_id     Int
-  variant_name   String  @db.VarChar(50)
-  price          Decimal @db.Decimal(10, 2)
-  stock_quantity Int?    @default(0)
+  id            String   @id @default(uuid()) @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  variantName   String   @map("variant_name") @db.VarChar(50)
+  /// ราคาต่อชิ้น หน่วยสตางค์
+  price         Int
+  stockQuantity Int      @default(0) @map("stock_quantity")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  product     Product     @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: Cascade)
-  order_items OrderItem[]
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderItems OrderItem[]
 
-  @@unique([product_id, variant_name])
-  @@index([product_id])
+  @@unique([productId, variantName])
+  @@index([productId])
   @@map("product_variants")
 }
 
-// ------------------------------------------------------------
-// orders : คำสั่งซื้อ
-// ------------------------------------------------------------
+/// คำสั่งซื้อ — เจ้าของคือ core_user_id (claim `sub`)
 model Order {
-  order_id         Int      @id @default(autoincrement())
-  order_number     String   @unique @db.VarChar(20)
-  /// ผู้สั่งซื้อ — claim `sub` จาก Core Hub
-  core_user_id     String   @db.VarChar(64)
-  /// snapshot ข้อมูลผู้สั่ง ณ เวลาสั่งซื้อ
-  customer_name       String  @db.VarChar(100)
-  customer_email      String  @db.VarChar(100)
-  customer_phone      String  @db.VarChar(15)
-  customer_student_id String? @db.VarChar(20)
-  total_amount     Decimal  @db.Decimal(10, 2)
-  delivery_method  String   @db.VarChar(20)
-  shipping_fee     Decimal? @default(0.00) @db.Decimal(10, 2)
-  shipping_address String?  @db.Text
-  payment_slip     String?  @db.VarChar(255)
-  payment_status   String?  @default("pending") @db.VarChar(20)
-  order_status     String?  @default("pending") @db.VarChar(20)
-  pickup_code      String?  @unique @db.VarChar(50)
-  /// ข้อมูลการจัดส่ง — ใช้เฉพาะ delivery_method = "delivery"
-  shipping_carrier String?  @db.VarChar(50)
-  tracking_number  String?  @db.VarChar(50)
-  shipped_at       DateTime? @db.Timestamptz(6)
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  id              String         @id @default(uuid()) @db.Uuid
+  orderNumber     String         @unique @map("order_number") @db.VarChar(20)
+  coreUserId      String         @map("core_user_id") @db.VarChar(100)
+  /// อีเมลจาก token ตอนสั่งซื้อ (สำเนาไว้ให้เจ้าหน้าที่ติดต่อ — Core Hub ยังเป็นเจ้าของข้อมูล)
+  customerEmail   String         @map("customer_email") @db.VarChar(255)
+  /// ชื่อผู้รับ — local data ที่ลูกค้ากรอกเอง (Core Hub v1.0 ยังไม่มี full_name)
+  recipientName   String         @map("recipient_name") @db.VarChar(100)
+  /// เบอร์โทร รูปแบบไม่มีขีด
+  recipientPhone  String         @map("recipient_phone") @db.VarChar(15)
+  /// ยอดรวมทั้งหมด หน่วยสตางค์
+  totalAmount     Int            @map("total_amount")
+  deliveryMethod  DeliveryMethod @map("delivery_method")
+  /// ค่าจัดส่ง หน่วยสตางค์
+  shippingFee     Int            @default(0) @map("shipping_fee")
+  shippingAddress String?        @map("shipping_address") @db.Text
+  paymentSlip     String?        @map("payment_slip") @db.VarChar(255)
+  paymentStatus   PaymentStatus  @default(PENDING) @map("payment_status")
+  orderStatus     OrderStatus    @default(PENDING) @map("order_status")
+  pickupCode      String?        @unique @map("pickup_code") @db.VarChar(50)
+  shippingCarrier String?        @map("shipping_carrier") @db.VarChar(50)
+  trackingNumber  String?        @map("tracking_number") @db.VarChar(50)
+  shippedAt       DateTime?      @map("shipped_at") @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  order_items OrderItem[]
-  pickup_logs PickupLog[]
+  orderItems OrderItem[]
+  pickupLogs PickupLog[]
 
-  @@index([core_user_id])
-  @@index([order_status])
-  @@index([payment_status])
-  @@index([tracking_number])
+  @@index([coreUserId])
+  @@index([orderStatus])
+  @@index([paymentStatus])
+  @@index([trackingNumber])
   @@map("orders")
 }
 
-// ------------------------------------------------------------
-// order_items : รายการสินค้าในคำสั่งซื้อ
-// ------------------------------------------------------------
+/// รายการสินค้าในคำสั่งซื้อ
 model OrderItem {
-  item_id          Int      @id @default(autoincrement())
-  order_id         Int
-  variant_id       Int
-  quantity         Int
-  unit_price       Decimal  @db.Decimal(10, 2)
-  is_preorder_item Boolean? @default(false)
+  id             String   @id @default(uuid()) @db.Uuid
+  orderId        String   @map("order_id") @db.Uuid
+  variantId      String   @map("variant_id") @db.Uuid
+  quantity       Int
+  /// ราคาต่อชิ้น ณ ตอนสั่ง หน่วยสตางค์
+  unitPrice      Int      @map("unit_price")
+  isPreorderItem Boolean  @default(false) @map("is_preorder_item")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  order   Order          @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Cascade)
-  variant ProductVariant @relation(fields: [variant_id], references: [variant_id], onDelete: Restrict, onUpdate: Cascade)
+  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@index([order_id])
-  @@index([variant_id])
+  @@index([orderId])
+  @@index([variantId])
   @@map("order_items")
 }
 
-// ------------------------------------------------------------
-// pickup_logs : บันทึกการรับสินค้าหน้าร้าน (เจ้าหน้าที่เป็นผู้บันทึก)
-// ------------------------------------------------------------
+/// บันทึกการส่งมอบสินค้าหน้าร้าน — ผู้บันทึกคือเจ้าหน้าที่ที่ login อยู่ (claim `sub`)
 model PickupLog {
-  pickup_id   Int      @id @default(autoincrement())
-  order_id    Int
-  /// เจ้าหน้าที่ผู้บันทึก — claim `sub` จาก Core Hub
-  staff_core_user_id String @db.VarChar(64)
-  staff_name         String @db.VarChar(100)
-  pickup_time DateTime @default(now()) @db.Timestamptz(6)
-  notes       String?  @db.Text
+  id               String   @id @default(uuid()) @db.Uuid
+  orderId          String   @map("order_id") @db.Uuid
+  staffCoreUserId  String   @map("staff_core_user_id") @db.VarChar(100)
+  staffEmail       String   @map("staff_email") @db.VarChar(255)
+  pickupTime       DateTime @default(now()) @map("pickup_time") @db.Timestamptz(6)
+  notes            String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // Relations
-  order Order @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-  @@index([order_id])
-  @@index([staff_core_user_id])
+  @@index([orderId])
+  @@index([staffCoreUserId])
   @@map("pickup_logs")
 }

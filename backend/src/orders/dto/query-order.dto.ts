@@ -1,31 +1,36 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
-import { DELIVERY_METHODS, ORDER_STATUSES, PAYMENT_STATUSES } from '../../common/constants.js';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { DeliveryMethod, OrderStatus, PaymentStatus } from '../../../generated/prisma/enums';
+import { PaginationQueryDto } from '../../common/pagination-query.dto';
+import { QueryBoolean } from '../../common/query-boolean';
 
 export class QueryOrderDto extends PaginationQueryDto {
   @IsOptional()
-  @IsString({ message: 'core_user_id ต้องเป็นข้อความ' })
-  core_user_id?: string;
+  @IsEnum(OrderStatus, { message: 'orderStatus ไม่ถูกต้อง' })
+  orderStatus?: OrderStatus;
 
   @IsOptional()
-  @IsIn(ORDER_STATUSES, {
-    message: `order_status ต้องเป็นหนึ่งใน: ${ORDER_STATUSES.join(', ')}`,
-  })
-  order_status?: string;
+  @IsEnum(PaymentStatus, { message: 'paymentStatus ไม่ถูกต้อง' })
+  paymentStatus?: PaymentStatus;
 
   @IsOptional()
-  @IsIn(PAYMENT_STATUSES, {
-    message: `payment_status ต้องเป็นหนึ่งใน: ${PAYMENT_STATUSES.join(', ')}`,
-  })
-  payment_status?: string;
+  @IsEnum(DeliveryMethod, { message: 'deliveryMethod ไม่ถูกต้อง' })
+  deliveryMethod?: DeliveryMethod;
 
-  @IsOptional()
-  @IsIn(DELIVERY_METHODS, {
-    message: `delivery_method ต้องเป็นหนึ่งใน: ${DELIVERY_METHODS.join(', ')}`,
-  })
-  delivery_method?: string;
-
+  /** ค้นจากเลขที่คำสั่งซื้อ รหัสรับสินค้า เลขพัสดุ ชื่อหรืออีเมลผู้สั่ง */
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   search?: string;
+
+  /** เลขที่คำสั่งซื้อแบบตรงตัว เช่น ORD-202609-0001 */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  orderNumber?: string;
+
+  /** true = เฉพาะคำสั่งซื้อของฉัน (เจ้าหน้าที่ใช้ดูของตัวเอง) */
+  @IsOptional()
+  @QueryBoolean()
+  @IsBoolean({ message: 'mine ต้องเป็น true หรือ false' })
+  mine?: boolean;
 }

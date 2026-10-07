@@ -1,46 +1,34 @@
 import 'reflect-metadata';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { AppModule } from './app.module.js';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
+import { AppModule } from './app.module';
+import { configureApp, GLOBAL_PREFIX_OPTIONS, serveUploads } from './bootstrap';
+import { logEvent } from './common/structured-log';
+import { loadConfig } from './config/configuration';
 
 async function bootstrap() {
+  const config = loadConfig();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  const logger = new Logger('Bootstrap');
 
-  app.enableCors();
+  app.disable('x-powered-by');
+  app.enableCors({ origin: config.frontendUrl, credentials: true });
+  // ทุก endpoint อยู่ใต้ /api — ยกเว้น GET /auth/callback (api-conventions.md ข้อ 1)
+  app.setGlobalPrefix('api', GLOBAL_PREFIX_OPTIONS);
+  configureApp(app);
+  serveUploads(app);
+  app.enableShutdownHooks();
 
-  // เสิร์ฟรูปที่อัปโหลดไว้ — เปิดดูได้ที่ http://localhost:3000/uploads/products/xxx.jpg
-  // อยู่นอก prefix /api เพราะเป็นไฟล์ ไม่ใช่ endpoint
-  const uploadsDir = join(process.cwd(), 'uploads');
-  mkdirSync(join(uploadsDir, 'products'), { recursive: true });
-  app.useStaticAssets(uploadsDir, { prefix: '/uploads' });
+  await app.listen(config.port);
 
-  // ทุก endpoint อยู่ใต้ /api ยกเว้นหน้าแรกที่บอกข้อมูล API
-  app.setGlobalPrefix('api', { exclude: [{ path: '/', method: RequestMethod.GET }] });
-
-  // ตรวจ request body/query ตาม DTO อัตโนมัติ
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // ตัดฟิลด์ที่ไม่ได้ประกาศใน DTO ทิ้ง
-      transform: true, // แปลงชนิดข้อมูลตาม @Type()
-      transformOptions: { enableImplicitConversion: false },
-      errorHttpStatusCode: 422, // ข้อมูลไม่ผ่านการตรวจ → 422
-    }),
-  );
-
-  app.useGlobalInterceptors(new TransformInterceptor());
-  app.useGlobalFilters(new AllExceptionsFilter());
-
-  const port = Number(process.env.PORT) || 3000;
-  await app.listen(port);
-
-  logger.log(`CSMJU-Shop API ทำงานที่ http://localhost:${port}`);
-  logger.log(`Health check: http://localhost:${port}/api/health`);
+  logEvent('subsystem.started', {
+    subsystem: config.subsystemId,
+    port: config.port,
+    coreHubUrl: config.coreHub.url,
+    jwksUrl: config.coreHub.jwksUrl,
+    issuer: config.coreHub.issuer,
+    audience: config.coreHub.audience,
+  });
 }
 
-bootstrap();
+void bootstrap();

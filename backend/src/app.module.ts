@@ -1,25 +1,31 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { AppController } from './app.controller.js';
-import { PrismaModule } from './prisma/prisma.module.js';
-import { ProductsModule } from './products/products.module.js';
-import { VariantsModule } from './variants/variants.module.js';
-import { OrdersModule } from './orders/orders.module.js';
-import { OrderItemsModule } from './order-items/order-items.module.js';
-import { PickupLogsModule } from './pickup-logs/pickup-logs.module.js';
-import { UploadsModule } from './uploads/uploads.module.js';
+import { AuthModule } from './auth/auth.module';
+import { AppConfigModule } from './config/config.module';
+import { HealthController } from './health/health.controller';
+import { OrderItemsModule } from './order-items/order-items.module';
+import { OrderStatsModule } from './order-stats/order-stats.controller';
+import { OrdersModule } from './orders/orders.module';
+import { PickupLogsModule } from './pickup-logs/pickup-logs.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { ProductImagesModule } from './product-images/product-images.controller';
+import { PaymentSlipsModule } from './payment-slips/payment-slips.controller';
+import { ProductVariantsModule } from './product-variants/product-variants.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    AppConfigModule,
     PrismaModule,
+    AuthModule,
     ProductsModule,
-    VariantsModule,
+    ProductVariantsModule,
     OrdersModule,
     OrderItemsModule,
     PickupLogsModule,
-    UploadsModule,
+    OrderStatsModule,
+    ProductImagesModule,
+    PaymentSlipsModule,
   ],
-  controllers: [AppController],
+  controllers: [HealthController],
 })
 export class AppModule {}

@@ -1,21 +1,21 @@
-import { Type } from 'class-transformer';
-import { IsInt, Min } from 'class-validator';
+import { IsInt, IsUUID, Max, Min } from 'class-validator';
 
 export class CreateOrderItemDto {
-  @Type(() => Number)
-  @IsInt({ message: 'ต้องระบุ variant_id เป็นจำนวนเต็ม' })
-  @Min(1, { message: 'variant_id ไม่ถูกต้อง' })
-  variant_id: number;
+  /** id ของตัวเลือกสินค้า */
+  @IsUUID('4', { message: 'variantId ต้องเป็น UUID v4' })
+  variantId!: string;
 
-  @Type(() => Number)
+  /** จำนวน */
   @IsInt({ message: 'quantity ต้องเป็นจำนวนเต็ม' })
   @Min(1, { message: 'quantity ต้องมากกว่า 0' })
-  quantity: number;
+  @Max(99, { message: 'quantity สูงสุด 99 ต่อรายการ' })
+  quantity!: number;
 }
 
 export class UpdateOrderItemDto {
-  @Type(() => Number)
+  /** จำนวนใหม่ */
   @IsInt({ message: 'quantity ต้องเป็นจำนวนเต็ม' })
   @Min(1, { message: 'quantity ต้องมากกว่า 0' })
-  quantity: number;
+  @Max(99, { message: 'quantity สูงสุด 99 ต่อรายการ' })
+  quantity!: number;
 }

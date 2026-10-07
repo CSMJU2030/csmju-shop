@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PickupLogsController } from './pickup-logs.controller.js';
-import { PickupLogsService } from './pickup-logs.service.js';
+import { PickupLogsController, PickupVerificationsController } from './pickup-logs.controller';
+import { PickupLogsService } from './pickup-logs.service';
 
 @Module({
-  controllers: [PickupLogsController],
+  controllers: [PickupLogsController, PickupVerificationsController],
   providers: [PickupLogsService],
-  exports: [PickupLogsService],
 })
 export class PickupLogsModule {}

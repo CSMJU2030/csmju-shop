@@ -1,45 +1,42 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Min } from 'class-validator';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
+import { PaginationQueryDto } from '../../common/pagination-query.dto';
 
+/** บันทึกการส่งมอบ — ผู้บันทึกคือเจ้าหน้าที่ที่ login อยู่ (ไม่รับ id เจ้าหน้าที่จาก body) */
 export class CreatePickupLogDto {
+  /** id ของคำสั่งซื้อ (ส่งอย่างใดอย่างหนึ่งกับ pickupCode) */
   @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'order_id ต้องเป็นจำนวนเต็ม' })
-  @Min(1)
-  order_id?: number;
+  @IsUUID('4', { message: 'orderId ต้องเป็น UUID v4' })
+  orderId?: string;
 
+  /** รหัสรับสินค้า เช่น PICKUP-123456 */
   @IsOptional()
-  @IsString({ message: 'pickup_code ต้องเป็นข้อความ' })
-  pickup_code?: string;
+  @IsString({ message: 'pickupCode ต้องเป็นข้อความ' })
+  @Length(1, 50)
+  pickupCode?: string;
 
-  /** เจ้าหน้าที่ผู้บันทึก — claim `sub` จาก Core Hub */
-  @IsString({ message: 'ต้องระบุ staff_core_user_id' })
-  @Length(1, 64, { message: 'staff_core_user_id ยาว 1–64 ตัวอักษร' })
-  staff_core_user_id: string;
-
-  @IsString({ message: 'ต้องระบุ staff_name' })
-  @Length(1, 100, { message: 'staff_name ยาว 1–100 ตัวอักษร' })
-  staff_name: string;
-
+  /** หมายเหตุ */
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   notes?: string;
 }
 
-export class VerifyPickupCodeDto {
-  @IsString({ message: 'ต้องระบุ pickup_code' })
-  pickup_code: string;
+export class CreatePickupVerificationDto {
+  /** รหัสรับสินค้าที่ลูกค้าแสดง (สแกนจาก QR ได้) */
+  @IsString({ message: 'ต้องระบุ pickupCode' })
+  @IsNotEmpty({ message: 'ต้องระบุ pickupCode' })
+  @Length(1, 50)
+  pickupCode!: string;
 }
 
 export class QueryPickupLogDto extends PaginationQueryDto {
   @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'order_id ต้องเป็นจำนวนเต็ม' })
-  @Min(1)
-  order_id?: number;
+  @IsUUID('4', { message: 'orderId ต้องเป็น UUID v4' })
+  orderId?: string;
 
+  /** กรองตามเจ้าหน้าที่ผู้บันทึก (core_user_id) */
   @IsOptional()
-  @IsString({ message: 'staff_core_user_id ต้องเป็นข้อความ' })
-  staff_core_user_id?: string;
+  @IsString()
+  @MaxLength(100)
+  staffCoreUserId?: string;
 }

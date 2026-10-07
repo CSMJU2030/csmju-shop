@@ -1,28 +1,28 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { buildMeta } from '../common/utils/helpers.js';
+import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client';
+import { OrderStatus, PaymentStatus } from '../../generated/prisma/enums';
+import type { CoreHubIdentity } from '../auth/core-hub-identity';
+import { ApiError } from '../common/api-error';
+import { deleted, Paginated } from '../common/envelope';
+import { skipOf } from '../common/pagination-query.dto';
+import { ORDER_INCLUDE } from '../orders/orders.service';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   CreatePickupLogDto,
+  CreatePickupVerificationDto,
   QueryPickupLogDto,
-  VerifyPickupCodeDto,
-} from './dto/pickup-log.dto.js';
+} from './dto/pickup-log.dto';
 
 const LOG_INCLUDE = {
   order: {
     select: {
-      order_id: true,
-      order_number: true,
-      pickup_code: true,
-      order_status: true,
-      payment_status: true,
-      customer_name: true,
-      customer_student_id: true,
+      id: true,
+      orderNumber: true,
+      pickupCode: true,
+      orderStatus: true,
+      paymentStatus: true,
+      recipientName: true,
+      customerEmail: true,
     },
   },
 } satisfies Prisma.PickupLogInclude;
@@ -32,117 +32,100 @@ export class PickupLogsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: QueryPickupLogDto) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-
     const where: Prisma.PickupLogWhereInput = {
-      ...(query.order_id ? { order_id: query.order_id } : {}),
-      ...(query.staff_core_user_id ? { staff_core_user_id: query.staff_core_user_id } : {}),
+      ...(query.orderId ? { orderId: query.orderId } : {}),
+      ...(query.staffCoreUserId ? { staffCoreUserId: query.staffCoreUserId } : {}),
     };
-
     const [rows, total] = await Promise.all([
       this.prisma.pickupLog.findMany({
         where,
-        skip: query.skip,
-        take: limit,
-        orderBy: { pickup_id: 'desc' },
+        skip: skipOf(query),
+        take: query.limit,
+        orderBy: [{ pickupTime: 'desc' }, { id: 'asc' }],
         include: LOG_INCLUDE,
       }),
       this.prisma.pickupLog.count({ where }),
     ]);
-
-    return {
-      message: 'ดึงประวัติการรับสินค้าสำเร็จ',
-      data: rows,
-      meta: buildMeta(page, limit, total),
-    };
+    return Paginated.of(rows, total, query.page, query.limit);
   }
 
-  async findOne(pickup_id: number) {
-    const log = await this.prisma.pickupLog.findUnique({
-      where: { pickup_id },
-      include: LOG_INCLUDE,
-    });
-    if (!log) throw new NotFoundException('ไม่พบบันทึกการรับสินค้า');
-
-    return { message: 'ดึงข้อมูลการรับสินค้าสำเร็จ', data: log };
+  async findOne(id: string) {
+    const log = await this.prisma.pickupLog.findUnique({ where: { id }, include: LOG_INCLUDE });
+    if (!log) throw new ApiError('NOT_FOUND', 'ไม่พบบันทึกการรับสินค้า');
+    return log;
   }
 
-  /** ตรวจรหัสรับสินค้าก่อนส่งมอบจริง — ใช้ตอนลูกค้ามาถึงหน้าร้าน */
-  async verify(dto: VerifyPickupCodeDto) {
+  /** ตรวจรหัสรับสินค้าก่อนส่งมอบจริง — ใช้ตอนลูกค้ามาถึงจุดรับ */
+  async verify(dto: CreatePickupVerificationDto) {
     const order = await this.prisma.order.findUnique({
-      where: { pickup_code: dto.pickup_code },
-      include: {
-        order_items: {
-          include: { variant: { include: { product: { select: { name: true } } } } },
-        },
-        pickup_logs: true,
-      },
+      where: { pickupCode: dto.pickupCode.trim() },
+      include: ORDER_INCLUDE,
     });
-    if (!order) throw new NotFoundException('รหัสรับสินค้าไม่ถูกต้อง');
+    if (!order) throw new ApiError('NOT_FOUND', 'รหัสรับสินค้าไม่ถูกต้อง');
 
+    const alreadyPickedUp = order.pickupLogs.length > 0;
     return {
-      message: 'ตรวจสอบรหัสรับสินค้าสำเร็จ',
-      data: {
-        valid: order.payment_status === 'paid' && order.order_status !== 'cancelled',
-        already_picked_up: order.pickup_logs.length > 0,
-        order,
-      },
+      valid:
+        order.paymentStatus === PaymentStatus.PAID &&
+        order.orderStatus !== OrderStatus.CANCELLED &&
+        !alreadyPickedUp,
+      alreadyPickedUp,
+      order,
     };
   }
 
   /**
    * บันทึกการส่งมอบสินค้า
-   * - ผู้บันทึกระบุด้วย staff_core_user_id (สิทธิ์ staff/admin จะตรวจจาก token ของ Core Hub
-   *   ตอนเชื่อม Core Hub — ระบบนี้ไม่มีตาราง users ให้ตรวจ role เอง)
-   * - ออร์เดอร์ต้องชำระเงินแล้วและยังไม่ถูกยกเลิก
-   * - บันทึกสำเร็จแล้วปิดออร์เดอร์เป็น completed
+   * - คำสั่งซื้อต้องชำระเงินแล้ว ยังไม่ถูกยกเลิก และยังไม่เคยรับ
+   * - สำเร็จแล้วปิดคำสั่งซื้อเป็น COMPLETED
    */
-  async create(dto: CreatePickupLogDto) {
-    if (!dto.order_id && !dto.pickup_code) {
-      throw new UnprocessableEntityException(
-        'ต้องระบุ order_id หรือ pickup_code อย่างใดอย่างหนึ่ง',
-      );
+  async create(staff: CoreHubIdentity, dto: CreatePickupLogDto) {
+    if (!dto.orderId && !dto.pickupCode) {
+      throw new ApiError('VALIDATION_ERROR', 'ต้องระบุ orderId หรือ pickupCode อย่างใดอย่างหนึ่ง', [
+        'orderId or pickupCode is required',
+      ]);
     }
 
-    const log = await this.prisma.$transaction(async (tx) => {
-      const order = dto.order_id
-        ? await tx.order.findUnique({ where: { order_id: dto.order_id } })
-        : await tx.order.findUnique({ where: { pickup_code: dto.pickup_code! } });
-      if (!order) throw new NotFoundException('ไม่พบคำสั่งซื้อ');
+    return this.prisma.$transaction(async (tx) => {
+      const order = dto.orderId
+        ? await tx.order.findUnique({ where: { id: dto.orderId } })
+        : await tx.order.findUnique({ where: { pickupCode: dto.pickupCode!.trim() } });
+      if (!order) throw new ApiError('NOT_FOUND', 'ไม่พบคำสั่งซื้อ');
 
-      if (order.payment_status !== 'paid') {
-        throw new ConflictException(
-          `คำสั่งซื้อนี้ยังไม่ชำระเงิน (payment_status = ${order.payment_status})`,
-        );
+      if (order.deliveryMethod !== 'PICKUP') {
+        throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้เป็นแบบจัดส่ง ไม่ได้รับที่สาขา');
       }
-      if (order.order_status === 'cancelled') {
-        throw new ConflictException('คำสั่งซื้อนี้ถูกยกเลิกแล้ว');
+      if (order.paymentStatus !== PaymentStatus.PAID) {
+        throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้ยังไม่ได้ยืนยันการชำระเงิน');
+      }
+      if (order.orderStatus === OrderStatus.CANCELLED) {
+        throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้ถูกยกเลิกแล้ว');
+      }
+      const existing = await tx.pickupLog.count({ where: { orderId: order.id } });
+      if (existing > 0 || order.orderStatus === OrderStatus.COMPLETED) {
+        throw new ApiError('CONFLICT', 'คำสั่งซื้อนี้รับสินค้าไปแล้ว');
       }
 
       const created = await tx.pickupLog.create({
         data: {
-          order_id: order.order_id,
-          staff_core_user_id: dto.staff_core_user_id,
-          staff_name: dto.staff_name.trim(),
-          notes: dto.notes ?? null,
+          orderId: order.id,
+          staffCoreUserId: staff.coreUserId,
+          staffEmail: staff.email,
+          notes: dto.notes?.trim() || null,
         },
         include: LOG_INCLUDE,
       });
-
       await tx.order.update({
-        where: { order_id: order.order_id },
-        data: { order_status: 'completed' },
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.COMPLETED },
       });
-
-      return created;
+      return { ...created, order: { ...created.order, orderStatus: OrderStatus.COMPLETED } };
     });
-
-    return { message: 'บันทึกการรับสินค้าสำเร็จ', data: log };
   }
 
-  async remove(pickup_id: number) {
-    await this.prisma.pickupLog.delete({ where: { pickup_id } });
-    return { message: 'ลบบันทึกการรับสินค้าสำเร็จ', data: { pickup_id } };
+  async remove(id: string) {
+    await this.findOne(id);
+    await this.prisma.pickupLog.delete({ where: { id } });
+    return deleted(id);
   }
 }

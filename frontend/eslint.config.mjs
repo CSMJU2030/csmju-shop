@@ -1,18 +1,16 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
+// @ts-check
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
+// eslint-config-next ยังไม่อยู่ใน dependency whitelist ของ standards 1.0.x (ARC-02)
+// จึงใช้ชุดกฎของ typescript-eslint แทน
+export default tseslint.config(
+  { ignores: [".next/**", "out/**", "build/**", "next-env.d.ts", "src/lib/api-types.ts", "src/lib/vendor/**"] },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    // React Compiler rules ใหม่ของ eslint-config-next 16 — โค้ดเดิมโหลดข้อมูลใน useEffect
-    // ให้เป็น warning ไว้ก่อน แล้วค่อยทยอยแก้
     rules: {
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/immutability": "warn",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "src/lib/vendor/**"]),
-]);
-
-export default eslintConfig;
+);
