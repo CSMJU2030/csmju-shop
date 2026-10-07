@@ -84,7 +84,7 @@ curl -s -X POST http://localhost:3000/api/v1/subsystems/<id>/activate -H "Author
 ### เข้าสู่ระบบ
 
 ร้านค้าไม่มีหน้า login ของตัวเอง เปิด http://localhost:3228 แล้วระบบจะพาไปเข้าสู่ระบบที่ Core Hub
-(`{CORE_HUB_WEB_URL}/api/sso/csmju-shop`) → Core Hub ส่งกลับมาที่ `http://localhost:5028/auth/callback`
+(`{CORE_HUB_WEB_URL}/api/sso/csmju-shop`) → Core Hub ส่งกลับมาที่ `http://localhost:5028/auth/callback` (production: `https://csmju-shop.jowave.com/auth/callback`)
 → backend ตรวจ token แล้วตั้งคุกกี้ `core_hub_access_token` (HttpOnly) → กลับหน้าร้าน
 
 ## ทดสอบ
