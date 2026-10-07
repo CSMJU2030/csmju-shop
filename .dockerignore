@@ -1,0 +1,9 @@
+# DEP-03 — กัน secret และ node_modules ของเครื่องไม่ให้ติดเข้า image
+**/.env*
+!**/.env.example
+**/node_modules
+**/.next
+**/dist
+**/uploads
+.git
+standards

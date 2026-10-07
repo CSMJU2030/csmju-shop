@@ -189,7 +189,7 @@ describe('CSMJU Shop API (e2e)', () => {
     expect(String(res.headers['set-cookie'])).toMatch(
       /core_hub_access_token=.+HttpOnly; SameSite=Lax/,
     );
-    expect(res.headers.location).toBe('http://localhost:4000/?state=abc');
+    expect(res.headers.location).toBe('http://localhost:3228/?state=abc');
   });
 
   it('route ที่ไม่มี → 404 พร้อม error envelope', async () => {

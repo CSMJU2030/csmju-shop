@@ -32,9 +32,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 
   return {
     nodeEnv: env.NODE_ENV ?? 'development',
-    port: num(env.PORT, 3002),
+    port: num(env.PORT, 5028),
     subsystemId: env.SUBSYSTEM_ID ?? 'csmju-shop',
-    frontendUrl: (env.FRONTEND_URL ?? 'http://localhost:4000').replace(/\/+$/, ''),
+    frontendUrl: (env.FRONTEND_URL ?? 'http://localhost:3228').replace(/\/+$/, ''),
     coreHub: {
       url: coreHubUrl,
       webUrl: (env.CORE_HUB_WEB_URL ?? 'http://localhost:3100').replace(/\/+$/, ''),

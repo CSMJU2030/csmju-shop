@@ -14,8 +14,12 @@ RUN pnpm --filter backend build && pnpm --filter backend --prod deploy --legacy 
 
 FROM node:22-slim
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /out ./
-EXPOSE 3002
+# พอร์ตใน container ของทุกระบบคือ 4000 (deployment.md ข้อ 3.1) — compose ตอน dev ตั้ง PORT เองได้
+ENV NODE_ENV=production \
+    PORT=4000
+COPY --from=build --chown=node:node /out ./
+# DEP-02: ไม่รันเป็น root
+USER node
+EXPOSE 4000
 # ใช้ migration ที่ commit ไว้ แล้วเริ่มระบบ (ไม่รัน migrate dev ใน production)
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]

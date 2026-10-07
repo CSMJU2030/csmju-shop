@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "./auth-links";
 import type { Me } from "./types";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3002";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:5028";
 
 /** ใช้ฝั่ง server เท่านั้น (อ่านคุกกี้ผ่าน next/headers)
  *

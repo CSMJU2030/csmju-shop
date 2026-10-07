@@ -4,9 +4,9 @@
   "private": true,
   "description": "หน้าเว็บ CSMJU Shop (Next.js App Router) — ฝั่งลูกค้าและฝั่งเจ้าหน้าที่ ต่อกับ backend NestJS",
   "scripts": {
-    "dev": "next dev -p 4000",
+    "dev": "next dev -p 3228",
     "build": "next build",
-    "start": "next start -p 4000",
+    "start": "next start -p 3228",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
