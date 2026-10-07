@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 /* token file ของ CSMJU — ค่าสีทั้งหมดอยู่ที่นั่น ไฟล์นี้อ้างผ่าน var(--csmju-*) เท่านั้น */
-@import '../../styles/csmju-tokens.css';
+@import '../../styles/csmju/tokens.css';
 
 @theme {
   --font-sans: var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
